@@ -58,7 +58,11 @@ export default function SignupPage() {
           'Sesión: ' + (data.session ? 'sí' : 'no')
       );
 
-      router.push('/dashboard');
+      if (data.session) {
+        router.push('/dashboard');
+      } else {
+        alert('Revisa tu correo para confirmar la cuenta.');
+      }
     } catch (err) {
       alert('Ocurrió un error inesperado');
       console.error(err);
