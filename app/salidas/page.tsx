@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
@@ -12,6 +11,7 @@ const supabase = createClient(
 
 export default function SalidasPage() {
   const router = useRouter();
+
   const [producto, setProducto] = useState('');
   const [cantidad, setCantidad] = useState('');
   const [unidad, setUnidad] = useState('');
@@ -19,12 +19,11 @@ export default function SalidasPage() {
   const [vehiculo, setVehiculo] = useState('');
   const [autorizo, setAutorizo] = useState('');
   const [fotoPieza, setFotoPieza] = useState('');
+  const [origen, setOrigen] = useState('');
   const [loading, setLoading] = useState(false);
   const [salidas, setSalidas] = useState<any[]>([]);
   const [productosInventario, setProductosInventario] = useState<any[]>([]);
   const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([]);
-
-
 
   const cargarSalidas = async () => {
     const { data } = await supabase
@@ -38,20 +37,21 @@ export default function SalidasPage() {
   useEffect(() => {
     cargarSalidas();
   }, []);
+
   useEffect(() => {
-  const cargarProductos = async () => {
-    const { data, error } = await supabase
-      .from('inventario')
-      .select('producto, unidad, cantidad_actual')
-      .order('producto', { ascending: true });
+    const cargarProductos = async () => {
+      const { data, error } = await supabase
+        .from('inventario')
+        .select('id, producto, unidad, cantidad_actual, origen')
+        .order('producto', { ascending: true });
 
-    if (!error && data) {
-      setProductosInventario(data);
-    }
-  };
+      if (!error && data) {
+        setProductosInventario(data);
+      }
+    };
 
-  cargarProductos();
-}, []);
+    cargarProductos();
+  }, []);
 
   const handleGuardar = async () => {
     if (!producto || !cantidad || !unidad || !destino || !vehiculo || !autorizo) {
@@ -59,47 +59,53 @@ export default function SalidasPage() {
       return;
     }
 
+    if (!origen) {
+      alert('Selecciona un producto de la lista para tomar su origen');
+      return;
+    }
+
     setLoading(true);
 
     const productoNormalizado = producto.trim().toLowerCase();
 
-const { data: inventarioExistente, error: errorInventario } =
-  await supabase
-    .from('inventario')
-    .select('*')
-    .eq('producto', productoNormalizado)
-    .maybeSingle();
+    const { data: inventarioExistente, error: errorInventario } =
+      await supabase
+        .from('inventario')
+        .select('*')
+        .eq('producto', productoNormalizado)
+        .eq('origen', origen)
+        .maybeSingle();
 
-if (errorInventario) {
-  alert('Error buscando inventario');
-  setLoading(false);
-  return;
-}
+    if (errorInventario) {
+      alert('Error buscando inventario');
+      setLoading(false);
+      return;
+    }
 
-if (!inventarioExistente) {
-  alert('Producto no existe en inventario');
-  setLoading(false);
-  return;
-}
+    if (!inventarioExistente) {
+      alert('Producto no existe en inventario');
+      setLoading(false);
+      return;
+    }
 
-if (Number(inventarioExistente.cantidad_actual) < Number(cantidad)) {
-  alert('No hay suficiente stock');
-  setLoading(false);
-  return;
-}
-
+    if (Number(inventarioExistente.cantidad_actual) < Number(cantidad)) {
+      alert('No hay suficiente stock');
+      setLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from('salidas')
       .insert([
         {
-          producto,
+          producto: productoNormalizado,
           cantidad: Number(cantidad),
           unidad,
           destino,
           vehiculo,
           autorizado_por: autorizo,
           foto_pieza: fotoPieza,
+          origen,
         },
       ])
       .select()
@@ -110,16 +116,16 @@ if (Number(inventarioExistente.cantidad_actual) < Number(cantidad)) {
       setLoading(false);
       return;
     }
+
     const nuevaCantidad =
-  Number(inventarioExistente.cantidad_actual) - Number(cantidad);
+      Number(inventarioExistente.cantidad_actual) - Number(cantidad);
 
-await supabase
-  .from('inventario')
-  .update({
-    cantidad_actual: nuevaCantidad,
-  })
-  .eq('id', inventarioExistente.id);
-
+    await supabase
+      .from('inventario')
+      .update({
+        cantidad_actual: nuevaCantidad,
+      })
+      .eq('id', inventarioExistente.id);
 
     if (data) {
       setSalidas((prev) => [data, ...prev]);
@@ -132,6 +138,8 @@ await supabase
     setVehiculo('');
     setAutorizo('');
     setFotoPieza('');
+    setOrigen('');
+    setResultadosBusqueda([]);
     setLoading(false);
   };
 
@@ -173,18 +181,18 @@ await supabase
           </div>
 
           <button
-  onClick={() => router.push('/dashboard')}
-  style={{
-    marginBottom: 10,
-    background: 'none',
-    border: 'none',
-    color: '#1E40AF',
-    fontWeight: 600,
-    cursor: 'pointer',
-  }}
->
-  ← Inicio
-</button>
+            onClick={() => router.push('/dashboard')}
+            style={{
+              marginBottom: 10,
+              background: 'none',
+              border: 'none',
+              color: '#1E40AF',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            ← Inicio
+          </button>
 
           <h2
             style={{
@@ -207,69 +215,100 @@ await supabase
           />
 
           <input
-  placeholder="Producto"
-  value={producto}
-  onChange={(e) => {
-    const valor = e.target.value;
-    setProducto(valor);
+            placeholder="Producto"
+            value={producto}
+            onChange={(e) => {
+              const valor = e.target.value;
+              setProducto(valor);
+              setOrigen('');
 
-    if (!valor.trim()) {
-      setResultadosBusqueda([]);
-      return;
-    }
+              if (!valor.trim()) {
+                setResultadosBusqueda([]);
+                return;
+              }
 
-    const filtrados = productosInventario.filter((item) =>
-      item.producto.toLowerCase().includes(valor.toLowerCase())
-    );
+              const filtrados = productosInventario.filter((item) =>
+                item.producto.toLowerCase().includes(valor.toLowerCase())
+              );
 
-    setResultadosBusqueda(filtrados.slice(0, 8));
-  }}
-  style={inputStyle}
-/>
-{resultadosBusqueda.length > 0 && (
-  <div
-    style={{
-      background: '#FFFFFF',
-      border: '1px solid #D1D5DB',
-      borderRadius: 10,
-      marginTop: -8,
-      marginBottom: 12,
-      overflow: 'hidden',
-      boxShadow: '0 8px 18px rgba(0,0,0,0.08)',
-    }}
-  >
-    {resultadosBusqueda.map((item, index) => (
-      <div
-        key={index}
-        onClick={() => {
-          setProducto(item.producto);
-          if (item.unidad) {
-            setUnidad(item.unidad);
-          }
-          setResultadosBusqueda([]);
-        }}
-        style={{
-          padding: 12,
-          cursor: 'pointer',
-          borderBottom:
-            index !== resultadosBusqueda.length - 1
-              ? '1px solid #E2E8F0'
-              : 'none',
-          background: '#FFFFFF',
-        }}
-      >
-        <div style={{ fontWeight: 600, color: '#1F2937' }}>
-          {item.producto}
-        </div>
-        <div style={{ fontSize: 13, color: '#64748B' }}>
-          {item.cantidad_actual ?? 0} {item.unidad || ''}
-        </div>
-      </div>
-    ))}
-  </div>
-)}
+              setResultadosBusqueda(filtrados.slice(0, 8));
+            }}
+            style={inputStyle}
+          />
 
+          {resultadosBusqueda.length > 0 && (
+            <div
+              style={{
+                background: '#FFFFFF',
+                border: '1px solid #D1D5DB',
+                borderRadius: 10,
+                marginTop: -8,
+                marginBottom: 12,
+                overflow: 'hidden',
+                boxShadow: '0 8px 18px rgba(0,0,0,0.08)',
+              }}
+            >
+              {resultadosBusqueda.map((item, index) => (
+                <div
+                  key={`${item.producto}-${item.origen}-${index}`}
+                  onClick={() => {
+                    setProducto(item.producto);
+                    if (item.unidad) {
+                      setUnidad(item.unidad);
+                    }
+                    setOrigen(item.origen || '');
+                    setResultadosBusqueda([]);
+                  }}
+                  style={{
+                    padding: 12,
+                    cursor: 'pointer',
+                    borderBottom:
+                      index !== resultadosBusqueda.length - 1
+                        ? '1px solid #E2E8F0'
+                        : 'none',
+                    background: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: '#1F2937',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <span>
+                        {item.origen === 'MX' ? (
+                          <span className="fi fi-mx"></span>
+                        ) : item.origen === 'USA' ? (
+                          <span className="fi fi-us"></span>
+                        ) : null}
+                      </span>
+                      <span
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {item.producto}
+                      </span>
+                    </div>
 
+                    <div style={{ fontSize: 13, color: '#64748B' }}>
+                      {item.cantidad_actual ?? 0} {item.unidad || ''}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <input
             type="text"
@@ -281,20 +320,19 @@ await supabase
           />
 
           <select
-  value={unidad}
-  onChange={(e) => setUnidad(e.target.value)}
-  style={inputStyle}
->
-  <option value="">Unidad</option>
-  <option value="Pieza">Pieza</option>
-  <option value="Caja">Caja</option>
-  <option value="Litros">Litros</option>
-  <option value="Galones">Galones</option>
-  <option value="Kilos">Kilos</option>
-  <option value="Metros">Metros</option>
-  <option value="Paquete">Paquete</option>
-</select>
-
+            value={unidad}
+            onChange={(e) => setUnidad(e.target.value)}
+            style={inputStyle}
+          >
+            <option value="">Unidad</option>
+            <option value="Pieza">Pieza</option>
+            <option value="Caja">Caja</option>
+            <option value="Litros">Litros</option>
+            <option value="Galones">Galones</option>
+            <option value="Kilos">Kilos</option>
+            <option value="Metros">Metros</option>
+            <option value="Paquete">Paquete</option>
+          </select>
 
           <input
             placeholder="Destino"
@@ -340,8 +378,16 @@ await supabase
                     fontWeight: 700,
                     fontSize: 18,
                     color: '#1F2937',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
                   }}
                 >
+                  {salidas[0].origen === 'MX' ? (
+                    <span className="fi fi-mx"></span>
+                  ) : salidas[0].origen === 'USA' ? (
+                    <span className="fi fi-us"></span>
+                  ) : null}
                   {salidas[0].producto}
                 </p>
 
@@ -417,3 +463,4 @@ const smallText: React.CSSProperties = {
   color: '#475569',
   fontSize: 14,
 };
+
