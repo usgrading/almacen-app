@@ -16,7 +16,7 @@ export default function Home() {
       return;
     }
 
-    router.push('/principal');
+    router.push('/dashboard');
   };
 
   return (
