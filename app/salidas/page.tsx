@@ -280,7 +280,7 @@ export default function SalidasPage() {
                         color: '#1F2937',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 8,
+                        justifyContent: 'space-between',
                       }}
                     >
                       <span>
@@ -380,7 +380,7 @@ export default function SalidasPage() {
                     color: '#1F2937',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8,
+                    justifyContent: 'space-between',
                   }}
                 >
                   {salidas[0].origen === 'MX' ? (
