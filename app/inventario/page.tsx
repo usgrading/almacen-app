@@ -503,8 +503,9 @@ function renderValor(
   costo: unknown
 ): string {
   const calculado = getValorCalculado(valor, cantidad, costo);
+  const tieneValor = hasRenderableValor(valor, cantidad, costo);
 
-  if (calculado <= 0) {
+  if (!tieneValor) {
     return 'Sin valor';
   }
 
