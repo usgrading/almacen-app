@@ -19,6 +19,7 @@ type InventarioItem = {
   ubicacion?: string | null;
   origen?: string | null;
   valor_inventario?: number | string | null;
+  costo_unitario?: number | string | null;
 };
 
 export default function InventarioPage() {
@@ -101,17 +102,42 @@ export default function InventarioPage() {
   const itemsUSA = inventarioFiltrado.filter((item) => item.origen === 'USA');
 
   const valorMX = itemsMX.reduce(
-    (acc, item) => acc + toNumber(item.valor_inventario),
+    (acc, item) =>
+      acc +
+      getValorCalculado(
+        item.valor_inventario,
+        item.cantidad_actual,
+        item.costo_unitario
+      ),
     0
   );
 
   const valorUSA = itemsUSA.reduce(
-    (acc, item) => acc + toNumber(item.valor_inventario),
+    (acc, item) =>
+      acc +
+      getValorCalculado(
+        item.valor_inventario,
+        item.cantidad_actual,
+        item.costo_unitario
+      ),
     0
   );
 
-  const hayValoresMX = itemsMX.some((item) => hasRealValue(item.valor_inventario));
-  const hayValoresUSA = itemsUSA.some((item) => hasRealValue(item.valor_inventario));
+  const hayValoresMX = itemsMX.some((item) =>
+    hasRenderableValor(
+      item.valor_inventario,
+      item.cantidad_actual,
+      item.costo_unitario
+    )
+  );
+
+  const hayValoresUSA = itemsUSA.some((item) =>
+    hasRenderableValor(
+      item.valor_inventario,
+      item.cantidad_actual,
+      item.costo_unitario
+    )
+  );
 
   const renderBandera = (origen?: string | null) => {
     if (origen === 'MX') {
@@ -332,7 +358,11 @@ export default function InventarioPage() {
                     <div style={mobileRowStyle}>
                       <span style={mobileLabelStyle}>Valor total:</span>
                       <span style={mobileValueStyle}>
-                        {renderValor(item.valor_inventario)}
+                        {renderValor(
+                          item.valor_inventario,
+                          item.cantidad_actual,
+                          item.costo_unitario
+                        )}
                       </span>
                     </div>
                   )}
@@ -372,7 +402,13 @@ export default function InventarioPage() {
                       <td style={cellStyle}>{item.unidad || '—'}</td>
                       <td style={cellStyle}>{item.ubicacion || '—'}</td>
                       {esAdmin && (
-                        <td style={cellStyle}>{renderValor(item.valor_inventario)}</td>
+                        <td style={cellStyle}>
+                          {renderValor(
+                            item.valor_inventario,
+                            item.cantidad_actual,
+                            item.costo_unitario
+                          )}
+                        </td>
                       )}
                       <td style={cellStyleCenter}>
                         <div
@@ -410,13 +446,54 @@ function hasRealValue(value: unknown): boolean {
   return Number.isFinite(parsed);
 }
 
+function getValorCalculado(
+  valor: unknown,
+  cantidad: unknown,
+  costo: unknown
+): number {
+  if (hasRealValue(valor)) {
+    return toNumber(valor);
+  }
+
+  const cantidadNum = toNumber(cantidad);
+  const costoNum = toNumber(costo);
+
+  if (cantidadNum > 0 && costoNum > 0) {
+    return cantidadNum * costoNum;
+  }
+
+  return 0;
+}
+
+function hasRenderableValor(
+  valor: unknown,
+  cantidad: unknown,
+  costo: unknown
+): boolean {
+  if (hasRealValue(valor)) return true;
+
+  const cantidadNum = toNumber(cantidad);
+  const costoNum = toNumber(costo);
+
+  return cantidadNum > 0 && costoNum > 0;
+}
+
 function formatMoney(value: number): string {
   return `$${value.toLocaleString()}`;
 }
 
-function renderValor(value: unknown): string {
-  if (!hasRealValue(value)) return 'Sin valor';
-  return formatMoney(toNumber(value));
+function renderValor(
+  valor: unknown,
+  cantidad: unknown,
+  costo: unknown
+): string {
+  const calculado = getValorCalculado(valor, cantidad, costo);
+
+  if (calculado <= 0) {
+    return 'Sin valor';
+  }
+
+  return formatMoney(calculado);
 }
 
 const getFiltroStyle = (activo: boolean): React.CSSProperties => ({
