@@ -258,21 +258,33 @@ export default function InventarioPage() {
             onClick={() => setFiltroOrigen('TODOS')}
             style={getFiltroStyle(filtroOrigen === 'TODOS')}
           >
-            Todos
+            <span style={filtroContenidoStyle}>
+              <span>Todos</span>
+            </span>
           </button>
 
           <button
             onClick={() => setFiltroOrigen('MX')}
             style={getFiltroStyle(filtroOrigen === 'MX')}
           >
-            🇲🇽 MX
+            <span style={filtroContenidoStyle}>
+              <span style={flagInlineStyle}>
+                <span className="fi fi-mx"></span>
+              </span>
+              <span>MX</span>
+            </span>
           </button>
 
           <button
             onClick={() => setFiltroOrigen('USA')}
             style={getFiltroStyle(filtroOrigen === 'USA')}
           >
-            🇺🇸 USA
+            <span style={filtroContenidoStyle}>
+              <span style={flagInlineStyle}>
+                <span className="fi fi-us"></span>
+              </span>
+              <span>USA</span>
+            </span>
           </button>
         </div>
 
@@ -479,7 +491,10 @@ function hasRenderableValor(
 }
 
 function formatMoney(value: number): string {
-  return `$${value.toLocaleString()}`;
+  return `$${value.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function renderValor(
@@ -506,6 +521,14 @@ const getFiltroStyle = (activo: boolean): React.CSSProperties => ({
   fontWeight: 600,
   cursor: 'pointer',
 });
+
+const filtroContenidoStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  lineHeight: 1,
+};
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
