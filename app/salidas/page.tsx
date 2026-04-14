@@ -294,7 +294,8 @@ export default function SalidasPage() {
       {item.producto}
     </span>
 
-    <span style={{ flexShrink: 0 }}>
+    <span style={{ marginLeft: 'auto' }}>
+
       {item.origen === 'MX' ? (
         <span className="fi fi-mx"></span>
       ) : item.origen === 'USA' ? (
