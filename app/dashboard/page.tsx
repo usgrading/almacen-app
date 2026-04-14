@@ -202,14 +202,12 @@ export default function DashboardPage() {
               Reportes
             </button>
 
-            {profile?.rol === 'admin' && (
-              <button
-                onClick={() => router.push('/usuarios')}
-                style={buttonStyle}
-              >
-                Usuarios
-              </button>
-            )}
+            <button
+              onClick={() => router.push('/usuarios')}
+              style={buttonStyle}
+            >
+              Usuarios
+            </button>
           </div>
 
           <button
