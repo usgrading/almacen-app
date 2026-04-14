@@ -26,6 +26,11 @@ function getSupabaseErrorMessage(error: unknown): string {
   return "Error desconocido";
 }
 
+function esAltaDesdePanelUsuarios(u: Usuario): boolean {
+  if (u.rol === "admin" || u.rol === "manager") return true;
+  return u.debe_cambiar_password === true && u.username.trim().length > 0;
+}
+
 function mapProfileRow(row: Record<string, unknown>): Usuario | null {
   if (row.id === undefined || row.id === null) return null;
   const rawRol = String(row.rol ?? row.role ?? "viewer").toLowerCase();
@@ -67,6 +72,12 @@ export default function UsuariosPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rol, setRol] = useState<Rol>("viewer");
+  const [ocultarRegistroPropio, setOcultarRegistroPropio] = useState(true);
+
+  const usuariosListados = useMemo(() => {
+    if (!ocultarRegistroPropio) return usuarios;
+    return usuarios.filter(esAltaDesdePanelUsuarios);
+  }, [usuarios, ocultarRegistroPropio]);
 
   const canSubmit = useMemo(() => {
     return (
@@ -302,15 +313,32 @@ export default function UsuariosPage() {
         <section style={styles.tableSection}>
           <h2 style={styles.sectionTitle}>Listado de usuarios</h2>
 
+          <label style={styles.filterRow}>
+            <input
+              type="checkbox"
+              checked={ocultarRegistroPropio}
+              onChange={(e) => setOcultarRegistroPropio(e.target.checked)}
+            />
+            <span>
+              Solo equipo dado de alta desde aquí (ocultar quien se registró solo en{" "}
+              <code>/signup</code>)
+            </span>
+          </label>
+
           {loading ? (
             <p>Cargando usuarios...</p>
           ) : cargaError ? (
             <div style={styles.emptyCell}>Corrige el error arriba y pulsa Reintentar.</div>
           ) : usuarios.length === 0 ? (
             <div style={styles.emptyCell}>No hay usuarios registrados.</div>
+          ) : usuariosListados.length === 0 ? (
+            <div style={styles.emptyCell}>
+              Ningún usuario coincide con el filtro. Desmarca la casilla para ver todos (
+              {usuarios.length} en total).
+            </div>
           ) : esCel ? (
             <div style={styles.mobileList}>
-              {usuarios.map((usuario) => (
+              {usuariosListados.map((usuario) => (
                 <div key={usuario.id} style={styles.mobileCard}>
                   <div style={styles.mobileHeader}>
                     <strong style={styles.mobileTitle}>{usuario.nombre}</strong>
@@ -360,7 +388,7 @@ export default function UsuariosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {usuarios.map((usuario) => (
+                  {usuariosListados.map((usuario) => (
                     <tr key={usuario.id}>
                       <td style={styles.td}>{usuario.nombre}</td>
                       <td style={styles.td}>{usuario.email}</td>
@@ -467,6 +495,15 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: "10px",
     padding: "16px",
     backgroundColor: "#ffffff",
+  },
+  filterRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "10px",
+    marginBottom: "14px",
+    fontSize: "14px",
+    color: "#334155",
+    cursor: "pointer",
   },
   tableWrapper: {
     overflowX: "auto",
