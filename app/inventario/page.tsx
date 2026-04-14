@@ -228,7 +228,8 @@ export default function InventarioPage() {
                   </span>
                 </div>
                 <div style={resumenValueStyle}>
-                  {hayValoresMX ? formatMoney(valorMX) : 'Sin datos'}
+                  {formatMoney(valorMX)}
+
                 </div>
               </div>
 
@@ -240,7 +241,8 @@ export default function InventarioPage() {
                   </span>
                 </div>
                 <div style={resumenValueStyle}>
-                  {hayValoresUSA ? formatMoney(valorUSA) : 'Sin datos'}
+                  {formatMoney(valorUSA)}
+
                 </div>
               </div>
             </>
