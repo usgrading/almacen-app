@@ -214,27 +214,58 @@ export default function SalidasPage() {
             style={inputStyle}
           />
 
-          <input
-            placeholder="Producto"
-            value={producto}
-            onChange={(e) => {
-              const valor = e.target.value;
-              setProducto(valor);
-              setOrigen('');
-
-              if (!valor.trim()) {
-                setResultadosBusqueda([]);
-                return;
-              }
-
-              const filtrados = productosInventario.filter((item) =>
-                item.producto.toLowerCase().includes(valor.toLowerCase())
-              );
-
-              setResultadosBusqueda(filtrados.slice(0, 8));
+          <div
+            style={{
+              position: 'relative',
+              marginBottom: 12,
             }}
-            style={inputStyle}
-          />
+          >
+            <input
+              placeholder="Producto"
+              value={producto}
+              onChange={(e) => {
+                const valor = e.target.value;
+                setProducto(valor);
+                setOrigen('');
+
+                if (!valor.trim()) {
+                  setResultadosBusqueda([]);
+                  return;
+                }
+
+                const filtrados = productosInventario.filter((item) =>
+                  item.producto.toLowerCase().includes(valor.toLowerCase())
+                );
+
+                setResultadosBusqueda(filtrados.slice(0, 8));
+              }}
+              style={{
+                ...inputStyle,
+                marginBottom: 0,
+                paddingRight: 44,
+              }}
+            />
+
+            {origen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 14,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  pointerEvents: 'none',
+                }}
+              >
+                {origen === 'MX' ? (
+                  <span className="fi fi-mx"></span>
+                ) : origen === 'USA' ? (
+                  <span className="fi fi-us"></span>
+                ) : null}
+              </div>
+            )}
+          </div>
 
           {resultadosBusqueda.length > 0 && (
             <div
@@ -249,71 +280,70 @@ export default function SalidasPage() {
               }}
             >
               {resultadosBusqueda.map((item, index) => (
-  <div
-    key={`${item.producto}-${item.origen}-${index}`}
-    onClick={() => {
-      setProducto(item.producto);
-      if (item.unidad) {
-        setUnidad(item.unidad);
-      }
-      setOrigen(item.origen || '');
-      setResultadosBusqueda([]);
-    }}
-    style={{
-      padding: 12,
-      cursor: 'pointer',
-      borderBottom:
-        index !== resultadosBusqueda.length - 1
-          ? '1px solid #E2E8F0'
-          : 'none',
-      background: '#FFFFFF',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-    }}
-  >
-    <div
-      style={{
-        minWidth: 0,
-        flex: 1,
-      }}
-    >
-      <div
-        style={{
-          fontWeight: 600,
-          color: '#1F2937',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {item.producto}
-      </div>
+                <div
+                  key={`${item.producto}-${item.origen}-${index}`}
+                  onClick={() => {
+                    setProducto(item.producto);
+                    if (item.unidad) {
+                      setUnidad(item.unidad);
+                    }
+                    setOrigen(item.origen || '');
+                    setResultadosBusqueda([]);
+                  }}
+                  style={{
+                    padding: 12,
+                    cursor: 'pointer',
+                    borderBottom:
+                      index !== resultadosBusqueda.length - 1
+                        ? '1px solid #E2E8F0'
+                        : 'none',
+                    background: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      minWidth: 0,
+                      flex: 1,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: '#1F2937',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {item.producto}
+                    </div>
 
-      <div style={{ fontSize: 13, color: '#64748B' }}>
-        {item.cantidad_actual ?? 0} {item.unidad || ''}
-      </div>
-    </div>
+                    <div style={{ fontSize: 13, color: '#64748B' }}>
+                      {item.cantidad_actual ?? 0} {item.unidad || ''}
+                    </div>
+                  </div>
 
-    <div
-      style={{
-        flexShrink: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: 28,
-      }}
-    >
-      {item.origen === 'MX' ? (
-        <span className="fi fi-mx"></span>
-      ) : item.origen === 'USA' ? (
-        <span className="fi fi-us"></span>
-      ) : null}
-    </div>
-  </div>
-))}
-
+                  <div
+                    style={{
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 28,
+                    }}
+                  >
+                    {item.origen === 'MX' ? (
+                      <span className="fi fi-mx"></span>
+                    ) : item.origen === 'USA' ? (
+                      <span className="fi fi-us"></span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -379,7 +409,7 @@ export default function SalidasPage() {
               </p>
             ) : (
               <div style={cardStyle}>
-                <p
+                <div
                   style={{
                     margin: 0,
                     fontWeight: 700,
@@ -388,15 +418,29 @@ export default function SalidasPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    gap: 12,
                   }}
                 >
-                  {salidas[0].origen === 'MX' ? (
-                    <span className="fi fi-mx"></span>
-                  ) : salidas[0].origen === 'USA' ? (
-                    <span className="fi fi-us"></span>
-                  ) : null}
-                  {salidas[0].producto}
-                </p>
+                  <span
+                    style={{
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1,
+                    }}
+                  >
+                    {salidas[0].producto}
+                  </span>
+
+                  <span style={{ flexShrink: 0 }}>
+                    {salidas[0].origen === 'MX' ? (
+                      <span className="fi fi-mx"></span>
+                    ) : salidas[0].origen === 'USA' ? (
+                      <span className="fi fi-us"></span>
+                    ) : null}
+                  </span>
+                </div>
 
                 <p
                   style={{
@@ -470,4 +514,3 @@ const smallText: React.CSSProperties = {
   color: '#475569',
   fontSize: 14,
 };
-
