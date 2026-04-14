@@ -76,10 +76,15 @@ export default function InventarioPage() {
     (acc, item) => acc + Number(item.cantidad_actual || 0),
     0
   );
-  const valorTotal = inventarioFiltrado.reduce(
-    (acc, item) => acc + Number(item.valor_inventario || 0),
-    0
-  );
+  const valorMX = inventarioFiltrado
+  .filter((item) => item.origen === 'MX')
+  .reduce((acc, item) => acc + Number(item.valor_inventario || 0), 0);
+
+const valorUSA = inventarioFiltrado
+  .filter((item) => item.origen === 'USA')
+  .reduce((acc, item) => acc + Number(item.valor_inventario || 0), 0);
+
+const valorTotal = valorMX + valorUSA;
 
   return (
     <main
@@ -153,11 +158,30 @@ export default function InventarioPage() {
           </div>
 
           {esAdmin && (
-            <div style={resumenCardStyle}>
-              <div style={resumenLabelStyle}>Valor inventario</div>
-              <div style={resumenValueStyle}>${valorTotal.toLocaleString()}</div>
-            </div>
-          )}
+  <>
+    <div style={resumenCardStyle}>
+      <div style={resumenLabelStyle}>Valor MX 🇲🇽</div>
+      <div style={resumenValueStyle}>
+        ${valorMX.toLocaleString()}
+      </div>
+    </div>
+
+    <div style={resumenCardStyle}>
+      <div style={resumenLabelStyle}>Valor USA 🇺🇸</div>
+      <div style={resumenValueStyle}>
+        ${valorUSA.toLocaleString()}
+      </div>
+    </div>
+
+    <div style={resumenCardStyle}>
+      <div style={resumenLabelStyle}>Total</div>
+      <div style={resumenValueStyle}>
+        ${valorTotal.toLocaleString()}
+      </div>
+    </div>
+  </>
+)}
+
         </div>
 
         <input
