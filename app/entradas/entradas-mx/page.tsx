@@ -277,6 +277,23 @@ export default function EntradasPage() {
     }
   };
 
+  useEffect(() => {
+  const cantidadNum = Number(cantidad);
+  const costoUnitarioNum = Number(costoUnitario);
+
+  if (
+    Number.isFinite(cantidadNum) &&
+    cantidadNum > 0 &&
+    Number.isFinite(costoUnitarioNum) &&
+    costoUnitarioNum > 0
+  ) {
+    const total = Math.round(cantidadNum * costoUnitarioNum * 100) / 100;
+    setCostoTotal(String(total));
+  } else if (!costoUnitario.trim()) {
+    setCostoTotal('');
+  }
+}, [cantidad, costoUnitario]);
+
   return (
     <main
       style={{
@@ -480,26 +497,28 @@ export default function EntradasPage() {
             </select>
 
             <input
-              type="text"
-              inputMode="decimal"
-              placeholder="Costo unitario"
-              value={costoUnitario}
-              onChange={(e) =>
-                setCostoUnitario(e.target.value.replace(/[^0-9.]/g, ''))
-              }
-              style={estiloInput}
-            />
+  type="text"
+  inputMode="decimal"
+  placeholder="$ Costo unitario"
+  value={costoUnitario}
+  onChange={(e) =>
+    setCostoUnitario(e.target.value.replace(/[^0-9.]/g, ''))
+  }
+  style={estiloInput}
+/>
 
             <input
-              type="text"
-              inputMode="decimal"
-              placeholder="Costo total"
-              value={costoTotal}
-              onChange={(e) =>
-                setCostoTotal(e.target.value.replace(/[^0-9.]/g, ''))
-              }
-              style={estiloInput}
-            />
+  type="text"
+  inputMode="decimal"
+  placeholder="$ Costo total"
+  value={costoTotal}
+  readOnly
+  style={{
+    ...estiloInput,
+    background: '#F1F5F9',
+    color: '#475569',
+  }}
+/>
 
             <select
               value={ubicacion}
