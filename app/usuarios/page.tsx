@@ -224,10 +224,19 @@ export default function UsuariosPage() {
           <div style={styles.errorBanner}>
             <p style={{ margin: 0, fontWeight: 600 }}>No se pudo cargar la lista</p>
             <p style={{ margin: "8px 0 0 0", fontSize: 14 }}>{cargaError}</p>
-            <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
-              Si ves “permission denied” o código 42501, en Supabase revisa políticas RLS
-              de la tabla <code>profiles</code> (SELECT para usuarios autenticados).
-            </p>
+            {cargaError.toLowerCase().includes("api key") ? (
+              <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
+                En el hosting (ej. Vercel) define{" "}
+                <code>NEXT_PUBLIC_SUPABASE_URL</code> y la clave pública anónima como{" "}
+                <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> o{" "}
+                <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> (Supabase → Settings → API).
+              </p>
+            ) : (
+              <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
+                Si ves permiso denegado o código 42501, revisa RLS de{" "}
+                <code>profiles</code> en Supabase (SELECT para usuarios autenticados).
+              </p>
+            )}
             <button type="button" onClick={() => void cargarUsuarios()} style={styles.retryButton}>
               Reintentar
             </button>
