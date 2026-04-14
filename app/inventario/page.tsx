@@ -9,10 +9,20 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 );
 
+type InventarioItem = {
+  id: string | number;
+  producto?: string | null;
+  cantidad_actual?: number | string | null;
+  unidad?: string | null;
+  ubicacion?: string | null;
+  origen?: string | null;
+  valor_inventario?: number | string | null;
+};
+
 export default function InventarioPage() {
   const router = useRouter();
 
-  const [inventario, setInventario] = useState<any[]>([]);
+  const [inventario, setInventario] = useState<InventarioItem[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [esCel, setEsCel] = useState(false);
 
@@ -26,7 +36,7 @@ export default function InventarioPage() {
       .order('producto', { ascending: true });
 
     if (!error && data) {
-      setInventario(data);
+      setInventario(data as InventarioItem[]);
     }
   };
 
@@ -74,19 +84,27 @@ export default function InventarioPage() {
   const totalProductos = inventarioFiltrado.length;
 
   const totalPiezas = inventarioFiltrado.reduce(
-    (acc, item) => acc + Number(item.cantidad_actual || 0),
+    (acc, item) => acc + toNumber(item.cantidad_actual),
     0
   );
 
-  const valorMX = inventarioFiltrado
-    .filter((item) => item.origen === 'MX')
-    .reduce((acc, item) => acc + Number(item.valor_inventario || 0), 0);
+  const itemsMX = inventarioFiltrado.filter((item) => item.origen === 'MX');
+  const itemsUSA = inventarioFiltrado.filter((item) => item.origen === 'USA');
 
-  const valorUSA = inventarioFiltrado
-    .filter((item) => item.origen === 'USA')
-    .reduce((acc, item) => acc + Number(item.valor_inventario || 0), 0);
+  const valorMX = itemsMX.reduce(
+    (acc, item) => acc + toNumber(item.valor_inventario),
+    0
+  );
 
-  const renderBandera = (origen: string) => {
+  const valorUSA = itemsUSA.reduce(
+    (acc, item) => acc + toNumber(item.valor_inventario),
+    0
+  );
+
+  const hayValoresMX = itemsMX.some((item) => hasRealValue(item.valor_inventario));
+  const hayValoresUSA = itemsUSA.some((item) => hasRealValue(item.valor_inventario));
+
+  const renderBandera = (origen?: string | null) => {
     if (origen === 'MX') {
       return <span className="fi fi-mx"></span>;
     }
@@ -174,7 +192,9 @@ export default function InventarioPage() {
                     <span className="fi fi-mx"></span>
                   </span>
                 </div>
-                <div style={resumenValueStyle}>${valorMX.toLocaleString()}</div>
+                <div style={resumenValueStyle}>
+                  {hayValoresMX ? formatMoney(valorMX) : 'Sin datos'}
+                </div>
               </div>
 
               <div style={resumenCardStyle}>
@@ -184,7 +204,9 @@ export default function InventarioPage() {
                     <span className="fi fi-us"></span>
                   </span>
                 </div>
-                <div style={resumenValueStyle}>${valorUSA.toLocaleString()}</div>
+                <div style={resumenValueStyle}>
+                  {hayValoresUSA ? formatMoney(valorUSA) : 'Sin datos'}
+                </div>
               </div>
             </>
           )}
@@ -259,7 +281,7 @@ export default function InventarioPage() {
                   <div style={mobileRowStyle}>
                     <span style={mobileLabelStyle}>Cantidad:</span>
                     <span style={mobileValueStyle}>
-                      {item.cantidad_actual ?? 0} {item.unidad || ''}
+                      {toNumber(item.cantidad_actual)} {item.unidad || ''}
                     </span>
                   </div>
 
@@ -272,7 +294,7 @@ export default function InventarioPage() {
                     <div style={mobileRowStyle}>
                       <span style={mobileLabelStyle}>Valor total:</span>
                       <span style={mobileValueStyle}>
-                        {item.valor_inventario ?? '—'}
+                        {renderValor(item.valor_inventario)}
                       </span>
                     </div>
                   )}
@@ -308,11 +330,11 @@ export default function InventarioPage() {
                       }}
                     >
                       <td style={cellStyle}>{item.producto || '—'}</td>
-                      <td style={cellStyle}>{item.cantidad_actual ?? 0}</td>
+                      <td style={cellStyle}>{toNumber(item.cantidad_actual)}</td>
                       <td style={cellStyle}>{item.unidad || '—'}</td>
                       <td style={cellStyle}>{item.ubicacion || '—'}</td>
                       {esAdmin && (
-                        <td style={cellStyle}>{item.valor_inventario ?? '—'}</td>
+                        <td style={cellStyle}>{renderValor(item.valor_inventario)}</td>
                       )}
                       <td style={cellStyleCenter}>
                         <div
@@ -336,6 +358,27 @@ export default function InventarioPage() {
       </div>
     </main>
   );
+}
+
+function toNumber(value: unknown): number {
+  if (value === null || value === undefined || value === '') return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function hasRealValue(value: unknown): boolean {
+  if (value === null || value === undefined || value === '') return false;
+  const parsed = Number(value);
+  return Number.isFinite(parsed);
+}
+
+function formatMoney(value: number): string {
+  return `$${value.toLocaleString()}`;
+}
+
+function renderValor(value: unknown): string {
+  if (!hasRealValue(value)) return 'Sin valor';
+  return formatMoney(toNumber(value));
 }
 
 const inputStyle: React.CSSProperties = {
