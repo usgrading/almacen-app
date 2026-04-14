@@ -274,37 +274,39 @@ export default function SalidasPage() {
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color: '#1F2937',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <span>
-                        {item.origen === 'MX' ? (
-                          <span className="fi fi-mx"></span>
-                        ) : item.origen === 'USA' ? (
-                          <span className="fi fi-us"></span>
-                        ) : null}
-                      </span>
-                      <span
-                        style={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {item.producto}
-                      </span>
-                    </div>
+  <div
+    style={{
+      fontWeight: 600,
+      color: '#1F2937',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    }}
+  >
+    <span
+      style={{
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {item.producto}
+    </span>
 
-                    <div style={{ fontSize: 13, color: '#64748B' }}>
-                      {item.cantidad_actual ?? 0} {item.unidad || ''}
-                    </div>
-                  </div>
+    <span style={{ flexShrink: 0 }}>
+      {item.origen === 'MX' ? (
+        <span className="fi fi-mx"></span>
+      ) : item.origen === 'USA' ? (
+        <span className="fi fi-us"></span>
+      ) : null}
+    </span>
+  </div>
+
+  <div style={{ fontSize: 13, color: '#64748B' }}>
+    {item.cantidad_actual ?? 0} {item.unidad || ''}
+  </div>
+</div>
                 </div>
               ))}
             </div>
