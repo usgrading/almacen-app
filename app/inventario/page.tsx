@@ -72,19 +72,31 @@ export default function InventarioPage() {
   }, [inventario, busqueda]);
 
   const totalProductos = inventarioFiltrado.length;
+
   const totalPiezas = inventarioFiltrado.reduce(
     (acc, item) => acc + Number(item.cantidad_actual || 0),
     0
   );
+
   const valorMX = inventarioFiltrado
-  .filter((item) => item.origen === 'MX')
-  .reduce((acc, item) => acc + Number(item.valor_inventario || 0), 0);
+    .filter((item) => item.origen === 'MX')
+    .reduce((acc, item) => acc + Number(item.valor_inventario || 0), 0);
 
-const valorUSA = inventarioFiltrado
-  .filter((item) => item.origen === 'USA')
-  .reduce((acc, item) => acc + Number(item.valor_inventario || 0), 0);
+  const valorUSA = inventarioFiltrado
+    .filter((item) => item.origen === 'USA')
+    .reduce((acc, item) => acc + Number(item.valor_inventario || 0), 0);
 
+  const renderBandera = (origen: string) => {
+    if (origen === 'MX') {
+      return <span className="fi fi-mx"></span>;
+    }
 
+    if (origen === 'USA') {
+      return <span className="fi fi-us"></span>;
+    }
+
+    return <span style={{ color: '#94A3B8' }}>—</span>;
+  };
 
   return (
     <main
@@ -138,9 +150,7 @@ const valorUSA = inventarioFiltrado
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: esCel
-  ? '1fr'
-  : 'repeat(4, minmax(0, 1fr))',
+            gridTemplateColumns: esCel ? '1fr' : 'repeat(4, minmax(0, 1fr))',
             gap: 12,
             marginBottom: 16,
           }}
@@ -156,23 +166,28 @@ const valorUSA = inventarioFiltrado
           </div>
 
           {esAdmin && (
-  <>
-    <div style={resumenCardStyle}>
-      <div style={resumenLabelStyle}>Valor MX 🇲🇽</div>
-      <div style={resumenValueStyle}>
-        ${valorMX.toLocaleString()}
-      </div>
-    </div>
+            <>
+              <div style={resumenCardStyle}>
+                <div style={resumenLabelWithFlagStyle}>
+                  <span>Valor MX</span>
+                  <span style={flagInlineStyle}>
+                    <span className="fi fi-mx"></span>
+                  </span>
+                </div>
+                <div style={resumenValueStyle}>${valorMX.toLocaleString()}</div>
+              </div>
 
-    <div style={resumenCardStyle}>
-      <div style={resumenLabelStyle}>Valor USA 🇺🇸</div>
-      <div style={resumenValueStyle}>
-        ${valorUSA.toLocaleString()}
-      </div>
-    </div>
-  </>
-)}
-
+              <div style={resumenCardStyle}>
+                <div style={resumenLabelWithFlagStyle}>
+                  <span>Valor USA</span>
+                  <span style={flagInlineStyle}>
+                    <span className="fi fi-us"></span>
+                  </span>
+                </div>
+                <div style={resumenValueStyle}>${valorUSA.toLocaleString()}</div>
+              </div>
+            </>
+          )}
         </div>
 
         <input
@@ -238,15 +253,7 @@ const valorUSA = inventarioFiltrado
                       {item.producto || '—'}
                     </div>
 
-                    <div style={{ flexShrink: 0 }}>
-                      {item.origen === 'MX' ? (
-                        <span className="fi fi-mx"></span>
-                      ) : item.origen === 'USA' ? (
-                        <span className="fi fi-us"></span>
-                      ) : (
-                        <span style={{ color: '#94A3B8' }}>—</span>
-                      )}
-                    </div>
+                    <div style={{ flexShrink: 0 }}>{renderBandera(item.origen)}</div>
                   </div>
 
                   <div style={mobileRowStyle}>
@@ -288,7 +295,7 @@ const valorUSA = inventarioFiltrado
                     <th style={headerStyle}>Unidad</th>
                     <th style={headerStyle}>Ubicación</th>
                     {esAdmin && <th style={headerStyle}>Valor total</th>}
-                    <th style={headerStyle}>Origen</th>
+                    <th style={headerStyleCenter}>Origen</th>
                   </tr>
                 </thead>
 
@@ -307,23 +314,18 @@ const valorUSA = inventarioFiltrado
                       {esAdmin && (
                         <td style={cellStyle}>{item.valor_inventario ?? '—'}</td>
                       )}
-                      <td style={cellStyle}>
-  <div
-    style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-    }}
-  >
-    {item.origen === 'MX' ? (
-      <span className="fi fi-mx"></span>
-    ) : item.origen === 'USA' ? (
-      <span className="fi fi-us"></span>
-    ) : (
-      <span style={{ color: '#94A3B8' }}>—</span>
-    )}
-  </div>
-</td>
+                      <td style={cellStyleCenter}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            minHeight: 20,
+                          }}
+                        >
+                          {renderBandera(item.origen)}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -364,6 +366,23 @@ const resumenLabelStyle: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
+const resumenLabelWithFlagStyle: React.CSSProperties = {
+  fontSize: 13,
+  color: '#64748B',
+  marginBottom: 6,
+  whiteSpace: 'nowrap',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+};
+
+const flagInlineStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  lineHeight: 1,
+};
+
 const resumenValueStyle: React.CSSProperties = {
   fontSize: 22,
   fontWeight: 700,
@@ -398,9 +417,26 @@ const headerStyle: React.CSSProperties = {
   borderBottom: '1px solid #CBD5E1',
 };
 
+const headerStyleCenter: React.CSSProperties = {
+  textAlign: 'center',
+  padding: '12px 14px',
+  fontSize: 14,
+  fontWeight: 700,
+  color: '#1F2937',
+  borderBottom: '1px solid #CBD5E1',
+};
+
 const cellStyle: React.CSSProperties = {
   padding: '12px 14px',
   fontSize: 14,
   color: '#334155',
   borderBottom: '1px solid #E2E8F0',
+};
+
+const cellStyleCenter: React.CSSProperties = {
+  padding: '12px 14px',
+  fontSize: 14,
+  color: '#334155',
+  borderBottom: '1px solid #E2E8F0',
+  textAlign: 'center',
 };
