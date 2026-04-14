@@ -9,6 +9,27 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 );
 
+type Salida = {
+  id: string | number;
+  producto: string;
+  cantidad: number;
+  unidad: string;
+  destino: string;
+  vehiculo: string;
+  autorizado_por: string;
+  foto_pieza?: string | null;
+  origen: 'MX' | 'USA' | string;
+};
+
+type ProductoInventario = {
+  id: string | number;
+  producto: string;
+  unidad: string | null;
+  cantidad_actual: number | null;
+  origen: 'MX' | 'USA' | string | null;
+  minimo?: number | null;
+};
+
 export default function SalidasPage() {
   const router = useRouter();
 
@@ -21,21 +42,21 @@ export default function SalidasPage() {
   const [fotoPieza, setFotoPieza] = useState('');
   const [origen, setOrigen] = useState('');
   const [loading, setLoading] = useState(false);
-  const [salidas, setSalidas] = useState<any[]>([]);
-  const [productosInventario, setProductosInventario] = useState<any[]>([]);
-  const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([]);
-
-  const cargarSalidas = async () => {
-    const { data } = await supabase
-      .from('salidas')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    setSalidas(data || []);
-  };
+  const [salidas, setSalidas] = useState<Salida[]>([]);
+  const [productosInventario, setProductosInventario] = useState<ProductoInventario[]>([]);
+  const [resultadosBusqueda, setResultadosBusqueda] = useState<ProductoInventario[]>([]);
 
   useEffect(() => {
-    cargarSalidas();
+    const cargarSalidas = async () => {
+      const { data } = await supabase
+        .from('salidas')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      setSalidas((data as Salida[]) || []);
+    };
+
+    void cargarSalidas();
   }, []);
 
   useEffect(() => {
@@ -46,11 +67,11 @@ export default function SalidasPage() {
         .order('producto', { ascending: true });
 
       if (!error && data) {
-        setProductosInventario(data);
+        setProductosInventario(data as ProductoInventario[]);
       }
     };
 
-    cargarProductos();
+    void cargarProductos();
   }, []);
 
   const handleGuardar = async () => {
@@ -119,6 +140,10 @@ export default function SalidasPage() {
 
     const nuevaCantidad =
       Number(inventarioExistente.cantidad_actual) - Number(cantidad);
+    const minimoConfigurado = Number(inventarioExistente.minimo);
+    const hayMinimoValido =
+      Number.isFinite(minimoConfigurado) && minimoConfigurado > 0;
+    const quedaBajoMinimo = hayMinimoValido && nuevaCantidad < minimoConfigurado;
 
     await supabase
       .from('inventario')
@@ -141,6 +166,14 @@ export default function SalidasPage() {
     setOrigen('');
     setResultadosBusqueda([]);
     setLoading(false);
+
+    if (quedaBajoMinimo) {
+      alert(
+        `Alarma de stock: "${productoNormalizado}" quedó por debajo del mínimo (${nuevaCantidad} < ${minimoConfigurado}).`
+      );
+    } else {
+      alert('Salida guardada');
+    }
   };
 
   return (

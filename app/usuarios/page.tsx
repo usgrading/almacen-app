@@ -1,3 +1,454 @@
-export default function SalidasPage() {
-  return <h1>usuarios</h1>;
+"use client";
+
+import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+type Rol = "admin" | "manager" | "viewer";
+
+type Usuario = {
+  id: string;
+  nombre: string;
+  email: string;
+  username: string;
+  rol: Rol;
+  activo: boolean;
+  debe_cambiar_password: boolean;
+};
+
+export default function UsuariosPage() {
+  const router = useRouter();
+
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [esCel, setEsCel] = useState(false);
+
+  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [rol, setRol] = useState<Rol>("viewer");
+
+  const canSubmit = useMemo(() => {
+    return (
+      nombre.trim().length > 0 &&
+      email.trim().length > 0 &&
+      username.trim().length > 0 &&
+      password.length >= 6
+    );
+  }, [nombre, email, username, password]);
+
+  const cargarUsuarios = async () => {
+    try {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, nombre, email, username, rol, activo, debe_cambiar_password")
+        .order("nombre", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setUsuarios((data as Usuario[]) ?? []);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Error al cargar usuarios";
+      alert(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarUsuarios();
+  }, []);
+
+  useEffect(() => {
+    const revisarPantalla = () => {
+      setEsCel(window.innerWidth < 768);
+    };
+
+    revisarPantalla();
+    window.addEventListener("resize", revisarPantalla);
+
+    return () => window.removeEventListener("resize", revisarPantalla);
+  }, []);
+
+  const resetForm = () => {
+    setNombre("");
+    setEmail("");
+    setUsername("");
+    setPassword("");
+    setRol("viewer");
+  };
+
+  const crearUsuario = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!canSubmit || submitting) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const { data: authData, error: signUpError } = await supabase.auth.signUp(
+        {
+          email: email.trim(),
+          password,
+        }
+      );
+
+      if (signUpError) {
+        throw signUpError;
+      }
+
+      const userId = authData.user?.id;
+      if (!userId) {
+        throw new Error("No se pudo obtener el ID del usuario creado.");
+      }
+
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: userId,
+        email: email.trim(),
+        username: username.trim(),
+        nombre: nombre.trim(),
+        rol,
+        activo: true,
+        debe_cambiar_password: true,
+      });
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      resetForm();
+      await cargarUsuarios();
+      alert("Usuario creado correctamente.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Error al crear el usuario";
+      alert(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleActivo = async (usuario: Usuario) => {
+    try {
+      const nuevoEstado = !usuario.activo;
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ activo: nuevoEstado })
+        .eq("id", usuario.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setUsuarios((prev) =>
+        prev.map((u) => (u.id === usuario.id ? { ...u, activo: nuevoEstado } : u))
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Error al actualizar el estado del usuario";
+      alert(message);
+    }
+  };
+
+  return (
+    <main style={styles.container}>
+      <div style={{ maxWidth: esCel ? 520 : 1100, margin: "0 auto" }}>
+        <button
+          type="button"
+          onClick={() => router.push("/dashboard")}
+          style={styles.backButton}
+        >
+          ← Inicio
+        </button>
+
+        <h1 style={styles.title}>Gestión de Usuarios</h1>
+
+        <form onSubmit={crearUsuario} style={styles.form}>
+          <h2 style={styles.sectionTitle}>Crear nuevo usuario</h2>
+
+          <div style={styles.formGrid}>
+            <input
+              style={styles.input}
+              type="text"
+              placeholder="Nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+            />
+            <input
+              style={styles.input}
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              style={styles.input}
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <input
+              style={styles.input}
+              type="password"
+              placeholder="Password (mínimo 6 caracteres)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <select
+              style={styles.input}
+              value={rol}
+              onChange={(e) => setRol(e.target.value as Rol)}
+            >
+              <option value="admin">admin</option>
+              <option value="manager">manager</option>
+              <option value="viewer">viewer</option>
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            disabled={!canSubmit || submitting}
+            style={{
+              ...styles.button,
+              opacity: !canSubmit || submitting ? 0.65 : 1,
+              cursor: !canSubmit || submitting ? "not-allowed" : "pointer",
+            }}
+          >
+            {submitting ? "Creando..." : "Crear usuario"}
+          </button>
+        </form>
+
+        <section style={styles.tableSection}>
+          <h2 style={styles.sectionTitle}>Listado de usuarios</h2>
+
+          {loading ? (
+            <p>Cargando usuarios...</p>
+          ) : usuarios.length === 0 ? (
+            <div style={styles.emptyCell}>No hay usuarios registrados.</div>
+          ) : esCel ? (
+            <div style={styles.mobileList}>
+              {usuarios.map((usuario) => (
+                <div key={usuario.id} style={styles.mobileCard}>
+                  <div style={styles.mobileHeader}>
+                    <strong style={styles.mobileTitle}>{usuario.nombre}</strong>
+                    <span style={styles.mobileRol}>{usuario.rol}</span>
+                  </div>
+
+                  <div style={styles.mobileRow}>
+                    <span style={styles.mobileLabel}>Email:</span>
+                    <span style={styles.mobileValue}>{usuario.email}</span>
+                  </div>
+                  <div style={styles.mobileRow}>
+                    <span style={styles.mobileLabel}>Username:</span>
+                    <span style={styles.mobileValue}>{usuario.username}</span>
+                  </div>
+                  <div style={styles.mobileRow}>
+                    <span style={styles.mobileLabel}>Activo:</span>
+                    <span style={styles.mobileValue}>
+                      {usuario.activo ? "true" : "false"}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleActivo(usuario)}
+                    style={{
+                      ...styles.button,
+                      marginTop: "10px",
+                      backgroundColor: usuario.activo ? "#b91c1c" : "#065f46",
+                    }}
+                  >
+                    {usuario.activo ? "Desactivar" : "Activar"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={styles.tableWrapper}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Nombre</th>
+                    <th style={styles.th}>Email</th>
+                    <th style={styles.th}>Username</th>
+                    <th style={styles.th}>Rol</th>
+                    <th style={styles.th}>Activo</th>
+                    <th style={styles.th}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usuarios.map((usuario) => (
+                    <tr key={usuario.id}>
+                      <td style={styles.td}>{usuario.nombre}</td>
+                      <td style={styles.td}>{usuario.email}</td>
+                      <td style={styles.td}>{usuario.username}</td>
+                      <td style={styles.td}>{usuario.rol}</td>
+                      <td style={styles.td}>{usuario.activo ? "true" : "false"}</td>
+                      <td style={styles.td}>
+                        <button
+                          type="button"
+                          onClick={() => toggleActivo(usuario)}
+                          style={{
+                            ...styles.button,
+                            backgroundColor: usuario.activo ? "#b91c1c" : "#065f46",
+                          }}
+                        >
+                          {usuario.activo ? "Desactivar" : "Activar"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
+  );
 }
+
+const styles: Record<string, CSSProperties> = {
+  container: {
+    padding: "24px",
+    maxWidth: "1100px",
+    margin: "0 auto",
+    fontFamily: "Arial, sans-serif",
+    color: "#111827",
+  },
+  title: {
+    marginBottom: "16px",
+    fontSize: "28px",
+  },
+  backButton: {
+    marginBottom: "10px",
+    background: "none",
+    border: "none",
+    color: "#1E40AF",
+    fontWeight: 600,
+    cursor: "pointer",
+    padding: 0,
+  },
+  sectionTitle: {
+    marginBottom: "12px",
+    fontSize: "20px",
+  },
+  form: {
+    border: "1px solid #e5e7eb",
+    borderRadius: "10px",
+    padding: "16px",
+    marginBottom: "24px",
+    backgroundColor: "#f9fafb",
+  },
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: "12px",
+    marginBottom: "12px",
+  },
+  input: {
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #d1d5db",
+    fontSize: "14px",
+    width: "100%",
+  },
+  button: {
+    border: "none",
+    backgroundColor: "#1d4ed8",
+    color: "#ffffff",
+    padding: "10px 14px",
+    borderRadius: "8px",
+    fontSize: "14px",
+  },
+  tableSection: {
+    border: "1px solid #e5e7eb",
+    borderRadius: "10px",
+    padding: "16px",
+    backgroundColor: "#ffffff",
+  },
+  tableWrapper: {
+    overflowX: "auto",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+  th: {
+    textAlign: "left",
+    padding: "10px",
+    borderBottom: "1px solid #e5e7eb",
+    fontSize: "14px",
+    backgroundColor: "#f3f4f6",
+  },
+  td: {
+    padding: "10px",
+    borderBottom: "1px solid #f3f4f6",
+    fontSize: "14px",
+  },
+  emptyCell: {
+    padding: "14px",
+    textAlign: "center",
+    color: "#6b7280",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "10px",
+  },
+  mobileList: {
+    display: "grid",
+    gap: "10px",
+  },
+  mobileCard: {
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "12px",
+    padding: "12px",
+  },
+  mobileHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "8px",
+  },
+  mobileTitle: {
+    color: "#111827",
+    fontSize: "16px",
+  },
+  mobileRol: {
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#1e40af",
+    textTransform: "uppercase",
+  },
+  mobileRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "10px",
+    marginTop: "4px",
+  },
+  mobileLabel: {
+    color: "#64748b",
+    fontSize: "13px",
+  },
+  mobileValue: {
+    color: "#334155",
+    fontSize: "13px",
+    fontWeight: 600,
+    textAlign: "right",
+    wordBreak: "break-word",
+  },
+};

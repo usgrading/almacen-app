@@ -3,66 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-);
+import { supabase } from '@/lib/supabase';
 
 type Profile = {
-  name: string | null;
-  role: string | null;
-};
-
-const pageStyle: React.CSSProperties = {
-  minHeight: '100vh',
-  background: '#EEF3F8',
-  padding: 20,
-  fontFamily: 'Arial, sans-serif',
-};
-
-const cardContainerStyle: React.CSSProperties = {
-  width: '100%',
-  maxWidth: 420,
-  margin: '0 auto',
-};
-
-const cardStyle: React.CSSProperties = {
-  background: '#FFFFFF',
-  borderRadius: 20,
-  padding: 24,
-  boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
-  border: '1px solid #DCE5EE',
-};
-
-const buttonStyle: React.CSSProperties = {
-  width: '100%',
-  padding: 18,
-  marginBottom: 12,
-  borderRadius: 14,
-  border: '1px solid #D7E0EA',
-  background: '#FFFFFF',
-  color: '#1F2937',
-  fontSize: 16,
-  fontWeight: 600,
-  cursor: 'pointer',
-  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
-  transition: 'all 0.2s ease',
-};
-
-const logoutButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
-  marginTop: 8,
-  marginBottom: 0,
-  background: '#1E40AF',
-  color: '#FFFFFF',
-  border: '1px solid #1E40AF',
-  boxShadow: '0 8px 18px rgba(30, 64, 175, 0.20)',
+  nombre: string | null;
+  rol: string | null;
 };
 
 function getRoleLabel(role: string | null) {
   if (role === 'admin') return 'Administrador';
+  if (role === 'manager') return 'Manager';
   if (role === 'viewer') return 'Usuario';
   return '';
 }
@@ -72,6 +22,7 @@ export default function DashboardPage() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [esCel, setEsCel] = useState(false);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -85,7 +36,7 @@ export default function DashboardPage() {
 
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('name, role')
+          .select('nombre, rol')
           .eq('id', data.user.id)
           .single();
 
@@ -97,6 +48,17 @@ export default function DashboardPage() {
 
     void checkUser();
   }, [router]);
+
+  useEffect(() => {
+    const revisarPantalla = () => {
+      setEsCel(window.innerWidth < 768);
+    };
+
+    revisarPantalla();
+    window.addEventListener('resize', revisarPantalla);
+
+    return () => window.removeEventListener('resize', revisarPantalla);
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -120,7 +82,7 @@ export default function DashboardPage() {
 
   return (
     <main style={pageStyle}>
-      <div style={cardContainerStyle}>
+      <div style={{ maxWidth: esCel ? 520 : 1100, margin: '0 auto' }}>
         <div style={cardStyle}>
           <div
             style={{
@@ -146,9 +108,9 @@ export default function DashboardPage() {
 
           <h1
             style={{
-              margin: '0 0 6px 0',
+              margin: '0 0 10px 0',
               textAlign: 'center',
-              fontSize: 28,
+              fontSize: esCel ? 24 : 28,
               color: '#1E40AF',
               fontWeight: 700,
             }}
@@ -162,7 +124,7 @@ export default function DashboardPage() {
               border: '1px solid #E2E8F0',
               borderRadius: 14,
               padding: 16,
-              marginBottom: 20,
+              marginBottom: 16,
               textAlign: 'center',
             }}
           >
@@ -174,7 +136,7 @@ export default function DashboardPage() {
                 fontSize: 18,
               }}
             >
-              {profile?.name || 'Sin nombre'}
+              {profile?.nombre || 'Sin nombre'}
             </p>
 
             <p
@@ -186,23 +148,35 @@ export default function DashboardPage() {
                 fontWeight: 500,
               }}
             >
-              {getRoleLabel(profile?.role ?? null)}
+              {getRoleLabel(profile?.rol ?? null)}
             </p>
           </div>
 
-          <div style={{ marginTop: 10 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: esCel ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+              gap: 12,
+            }}
+          >
             <button
               onClick={() => router.push('/entradas/entradas-mx')}
               style={buttonStyle}
             >
-              Entradas <span className="fi fi-mx" style={{ marginLeft: 8 }}></span>
+              <span style={buttonContentStyle}>
+                <span>Entradas</span>
+                <span className="fi fi-mx"></span>
+              </span>
             </button>
 
             <button
               onClick={() => router.push('/entradas/entradas-usa')}
               style={buttonStyle}
             >
-              Entradas <span className="fi fi-us" style={{ marginLeft: 8 }}></span>
+              <span style={buttonContentStyle}>
+                <span>Entradas</span>
+                <span className="fi fi-us"></span>
+              </span>
             </button>
 
             <button
@@ -220,13 +194,13 @@ export default function DashboardPage() {
             </button>
 
             <button
-              onClick={() => router.push('/faltantes')}
+              onClick={() => router.push('/reportes')}
               style={{ ...buttonStyle, textAlign: 'center' }}
             >
-              Faltantes
+              Reportes
             </button>
 
-            {profile?.role === 'admin' && (
+            {profile?.rol === 'admin' && (
               <button
                 onClick={() => router.push('/usuarios')}
                 style={buttonStyle}
@@ -238,7 +212,10 @@ export default function DashboardPage() {
 
           <button
             onClick={handleLogout}
-            style={logoutButtonStyle}
+            style={{
+              ...logoutButtonStyle,
+              marginTop: 14,
+            }}
           >
             Cerrar sesión
           </button>
@@ -247,3 +224,48 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+const pageStyle: React.CSSProperties = {
+  minHeight: '100vh',
+  background: '#EEF3F8',
+  padding: 20,
+  fontFamily: 'Arial, sans-serif',
+};
+
+const cardStyle: React.CSSProperties = {
+  background: '#FFFFFF',
+  borderRadius: 20,
+  padding: 20,
+  boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
+  border: '1px solid #DCE5EE',
+};
+
+const buttonStyle: React.CSSProperties = {
+  width: '100%',
+  padding: 16,
+  borderRadius: 14,
+  border: '1px solid #D7E0EA',
+  background: '#FFFFFF',
+  color: '#1F2937',
+  fontSize: 16,
+  fontWeight: 600,
+  cursor: 'pointer',
+  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+  transition: 'all 0.2s ease',
+};
+
+const buttonContentStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+};
+
+const logoutButtonStyle: React.CSSProperties = {
+  ...buttonStyle,
+  marginBottom: 0,
+  background: '#1E40AF',
+  color: '#FFFFFF',
+  border: '1px solid #1E40AF',
+  boxShadow: '0 8px 18px rgba(30, 64, 175, 0.20)',
+};

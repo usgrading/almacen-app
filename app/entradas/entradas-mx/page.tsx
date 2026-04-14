@@ -9,11 +9,27 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 );
 
+type EntradaResumen = {
+  producto?: string | null;
+  cantidad?: number | null;
+  unidad?: string | null;
+  ubicacion?: string | null;
+  proveedor?: string | null;
+  numero_factura?: string | null;
+  costo_unitario?: number | null;
+  costo_total?: number | null;
+};
+
+type InventarioLookup = {
+  minimo?: number | null;
+  maximo?: number | null;
+};
+
 export default function EntradasPage() {
   const router = useRouter();
 
   const [cargando, setCargando] = useState(false);
-  const [ultimaEntrada, setUltimaEntrada] = useState<any | null>(null);
+  const [ultimaEntrada, setUltimaEntrada] = useState<EntradaResumen | null>(null);
 
   // Factura
   const [proveedor, setProveedor] = useState('');
@@ -28,6 +44,10 @@ export default function EntradasPage() {
   const [costoTotal, setCostoTotal] = useState('');
   const [ubicacion, setUbicacion] = useState('');
   const [notas, setNotas] = useState('');
+  const [minimo, setMinimo] = useState('');
+  const [maximo, setMaximo] = useState('');
+  const [esPrimeraCaptura, setEsPrimeraCaptura] = useState<boolean | null>(null);
+  const [validandoPrimeraCaptura, setValidandoPrimeraCaptura] = useState(false);
 
   const estiloInput: React.CSSProperties = {
     width: '100%',
@@ -232,6 +252,27 @@ export default function EntradasPage() {
           return;
         }
       } else {
+        const minimoNum = Number(minimo);
+        const maximoNum = Number(maximo);
+
+        if (!Number.isFinite(minimoNum) || minimoNum <= 0) {
+          alert('En primera captura debes seleccionar un mínimo válido');
+          setCargando(false);
+          return;
+        }
+
+        if (!Number.isFinite(maximoNum) || maximoNum <= 0) {
+          alert('En primera captura debes seleccionar un máximo válido');
+          setCargando(false);
+          return;
+        }
+
+        if (maximoNum < minimoNum) {
+          alert('El máximo debe ser mayor o igual al mínimo');
+          setCargando(false);
+          return;
+        }
+
         const { error: errorInsert } = await supabase.from('inventario').insert([
           {
             producto: productoNormalizado,
@@ -241,6 +282,8 @@ export default function EntradasPage() {
             origen: 'MX',
             costo_unitario: costoUnitarioFinal > 0 ? costoUnitarioFinal : null,
             valor_inventario: costoTotalFinal > 0 ? costoTotalFinal : null,
+            minimo: minimoNum,
+            maximo: maximoNum,
           },
         ]);
 
@@ -266,6 +309,9 @@ export default function EntradasPage() {
       setCostoTotal('');
       setUbicacion('');
       setNotas('');
+      setMinimo('');
+      setMaximo('');
+      setEsPrimeraCaptura(null);
 
       alert('Entrada guardada 🔥');
       await cargarUltimaEntrada();
@@ -293,6 +339,53 @@ export default function EntradasPage() {
     setCostoTotal('');
   }
 }, [cantidad, costoUnitario]);
+
+  useEffect(() => {
+    const productoNormalizado = producto.trim().toLowerCase();
+
+    if (!productoNormalizado) {
+      setEsPrimeraCaptura(null);
+      setMinimo('');
+      setMaximo('');
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      setValidandoPrimeraCaptura(true);
+
+      const { data, error } = await supabase
+        .from('inventario')
+        .select('*')
+        .eq('producto', productoNormalizado)
+        .eq('origen', 'MX')
+        .maybeSingle();
+
+      if (error) {
+        setEsPrimeraCaptura(null);
+        setValidandoPrimeraCaptura(false);
+        return;
+      }
+
+      if (data) {
+        const item = data as InventarioLookup;
+        setEsPrimeraCaptura(false);
+        setMinimo(
+          item.minimo !== null && item.minimo !== undefined ? String(item.minimo) : ''
+        );
+        setMaximo(
+          item.maximo !== null && item.maximo !== undefined ? String(item.maximo) : ''
+        );
+      } else {
+        setEsPrimeraCaptura(true);
+        setMinimo('');
+        setMaximo('');
+      }
+
+      setValidandoPrimeraCaptura(false);
+    }, 350);
+
+    return () => clearTimeout(timeout);
+  }, [producto]);
 
   return (
     <main
@@ -467,6 +560,61 @@ export default function EntradasPage() {
               onChange={(e) => setProducto(e.target.value)}
               style={estiloInput}
             />
+
+            {validandoPrimeraCaptura && (
+              <p
+                style={{
+                  marginTop: -6,
+                  marginBottom: 10,
+                  color: '#64748B',
+                  fontSize: 13,
+                }}
+              >
+                Revisando si es primera captura...
+              </p>
+            )}
+
+            {esPrimeraCaptura && (
+              <>
+                <p
+                  style={{
+                    marginTop: -2,
+                    marginBottom: 8,
+                    color: '#1E40AF',
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  Primera captura: define stock mínimo y máximo
+                </p>
+
+                <select
+                  value={minimo}
+                  onChange={(e) => setMinimo(e.target.value)}
+                  style={estiloInput}
+                >
+                  <option value="">Mínimo</option>
+                  {Array.from({ length: 200 }, (_, i) => i + 1).map((n) => (
+                    <option key={`min-${n}`} value={String(n)}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={maximo}
+                  onChange={(e) => setMaximo(e.target.value)}
+                  style={estiloInput}
+                >
+                  <option value="">Máximo</option>
+                  {Array.from({ length: 200 }, (_, i) => i + 1).map((n) => (
+                    <option key={`max-${n}`} value={String(n)}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
 
             <input
               type="text"

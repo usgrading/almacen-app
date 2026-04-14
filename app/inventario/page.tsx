@@ -33,19 +33,19 @@ export default function InventarioPage() {
   // TODO: luego esto debe venir del perfil del usuario
   const esAdmin = true;
 
-  const cargarInventario = async () => {
-    const { data, error } = await supabase
-      .from('inventario')
-      .select('*')
-      .order('producto', { ascending: true });
-
-    if (!error && data) {
-      setInventario(data as InventarioItem[]);
-    }
-  };
-
   useEffect(() => {
-    cargarInventario();
+    const cargarInventario = async () => {
+      const { data, error } = await supabase
+        .from('inventario')
+        .select('*')
+        .order('producto', { ascending: true });
+
+      if (!error && data) {
+        setInventario(data as InventarioItem[]);
+      }
+    };
+
+    void cargarInventario();
   }, []);
 
   useEffect(() => {
@@ -121,22 +121,6 @@ export default function InventarioPage() {
         item.costo_unitario
       ),
     0
-  );
-
-  const hayValoresMX = itemsMX.some((item) =>
-    hasRenderableValor(
-      item.valor_inventario,
-      item.cantidad_actual,
-      item.costo_unitario
-    )
-  );
-
-  const hayValoresUSA = itemsUSA.some((item) =>
-    hasRenderableValor(
-      item.valor_inventario,
-      item.cantidad_actual,
-      item.costo_unitario
-    )
   );
 
   const renderBandera = (origen?: string | null) => {
