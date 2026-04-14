@@ -249,67 +249,71 @@ export default function SalidasPage() {
               }}
             >
               {resultadosBusqueda.map((item, index) => (
-                <div
-                  key={`${item.producto}-${item.origen}-${index}`}
-                  onClick={() => {
-                    setProducto(item.producto);
-                    if (item.unidad) {
-                      setUnidad(item.unidad);
-                    }
-                    setOrigen(item.origen || '');
-                    setResultadosBusqueda([]);
-                  }}
-                  style={{
-                    padding: 12,
-                    cursor: 'pointer',
-                    borderBottom:
-                      index !== resultadosBusqueda.length - 1
-                        ? '1px solid #E2E8F0'
-                        : 'none',
-                    background: '#FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
   <div
+    key={`${item.producto}-${item.origen}-${index}`}
+    onClick={() => {
+      setProducto(item.producto);
+      if (item.unidad) {
+        setUnidad(item.unidad);
+      }
+      setOrigen(item.origen || '');
+      setResultadosBusqueda([]);
+    }}
     style={{
-      fontWeight: 600,
-      color: '#1F2937',
+      padding: 12,
+      cursor: 'pointer',
+      borderBottom:
+        index !== resultadosBusqueda.length - 1
+          ? '1px solid #E2E8F0'
+          : 'none',
+      background: '#FFFFFF',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: 8,
+      gap: 12,
     }}
   >
-    <span
+    <div
       style={{
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        minWidth: 0,
+        flex: 1,
       }}
     >
-      {item.producto}
-    </span>
+      <div
+        style={{
+          fontWeight: 600,
+          color: '#1F2937',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {item.producto}
+      </div>
 
-    <span style={{ marginLeft: 'auto' }}>
+      <div style={{ fontSize: 13, color: '#64748B' }}>
+        {item.cantidad_actual ?? 0} {item.unidad || ''}
+      </div>
+    </div>
 
+    <div
+      style={{
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 28,
+      }}
+    >
       {item.origen === 'MX' ? (
         <span className="fi fi-mx"></span>
       ) : item.origen === 'USA' ? (
         <span className="fi fi-us"></span>
       ) : null}
-    </span>
+    </div>
   </div>
+))}
 
-  <div style={{ fontSize: 13, color: '#64748B' }}>
-    {item.cantidad_actual ?? 0} {item.unidad || ''}
-  </div>
-</div>
-                </div>
-              ))}
             </div>
           )}
 
