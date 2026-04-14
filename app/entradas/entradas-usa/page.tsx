@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
@@ -77,6 +76,7 @@ export default function EntradasPage() {
     const { data, error } = await supabase
       .from('entradas')
       .select('*')
+      .eq('origen', 'USA')
       .order('creado_en', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -90,144 +90,193 @@ export default function EntradasPage() {
     cargarUltimaEntrada();
   }, []);
 
+  const convertirNumero = (valor: string) => {
+    if (!valor.trim()) return 0;
+    const numero = Number(valor);
+    return Number.isFinite(numero) ? numero : 0;
+  };
+
+  const redondear2 = (valor: number) => {
+    return Math.round(valor * 100) / 100;
+  };
+
   const handleSubmit = async () => {
-  if (!producto.trim()) {
-    alert('Escribe el nombre de pieza');
-    return;
-  }
-
-  if (!cantidad.trim()) {
-    alert('Escribe la cantidad');
-    return;
-  }
-
-  if (!unidad) {
-    alert('Selecciona la unidad');
-    return;
-  }
-
-  if (!ubicacion) {
-    alert('Selecciona la ubicación');
-    return;
-  }
-
-  setCargando(true);
-
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    const usuarioId = userData.user?.id;
-    const productoNormalizado = producto.trim().toLowerCase();
-
-    const { data: nuevaEntrada, error: errorEntrada } = await supabase
-      .from('entradas')
-      .insert([
-        {
-          proveedor: proveedor.trim() || null,
-          numero_factura: numeroFactura.trim() || null,
-          fecha: fecha || null,
-          producto: productoNormalizado,
-          cantidad: Number(cantidad),
-          unidad,
-          costo_unitario: costoUnitario ? Number(costoUnitario) : null,
-          costo_total: costoTotal ? Number(costoTotal) : null,
-          ubicacion,
-          notas: notas.trim() || null,
-          creado_por: usuarioId || null,
-          foto_pieza: null,
-          foto_factura: null,
-          origen: 'USA',
-
-
-        },
-      ])
-      .select()
-      .single();
-
-    if (errorEntrada) {
-      console.error('Error entrada:', errorEntrada);
-      alert('Error al guardar la entrada: ' + errorEntrada.message);
-      setCargando(false);
+    if (!producto.trim()) {
+      alert('Escribe el nombre de pieza');
       return;
     }
 
-    const { data: inventarioExistente, error: errorInventario } = await supabase
-  .from('inventario')
-  .select('*')
-  .eq('producto', productoNormalizado)
-  .eq('origen', 'USA')
-  .maybeSingle();
-
-if (errorInventario) {
-  console.error('Error inventario:', errorInventario);
-  alert('Error buscando inventario: ' + errorInventario.message);
-  setCargando(false);
-  return;
-}
-
-if (inventarioExistente) {
-  const nuevaCantidad =
-    Number(inventarioExistente.cantidad_actual) + Number(cantidad);
-
-  const { error: errorUpdate } = await supabase
-    .from('inventario')
-    .update({
-      cantidad_actual: nuevaCantidad,
-      unidad,
-      ubicacion,
-    })
-    .eq('id', inventarioExistente.id);
-
-  if (errorUpdate) {
-    console.error('Error update inventario:', errorUpdate);
-    alert('Error actualizando inventario: ' + errorUpdate.message);
-    setCargando(false);
-    return;
-  }
-} else {
-  const { error: errorInsert } = await supabase
-    .from('inventario')
-    .insert([
-      {
-        producto: productoNormalizado,
-        cantidad_actual: Number(cantidad),
-        unidad,
-        ubicacion,
-        origen: 'USA',
-      },
-    ]);
-
-  if (errorInsert) {
-    console.error('Error insert inventario:', errorInsert);
-    alert('Error creando inventario: ' + errorInsert.message);
-    setCargando(false);
-    return;
-  }
-}
-
-    if (nuevaEntrada) {
-      setUltimaEntrada(nuevaEntrada);
+    if (!cantidad.trim()) {
+      alert('Escribe la cantidad');
+      return;
     }
 
-    setProveedor('');
-    setNumeroFactura('');
-    setFecha('');
-    setProducto('');
-    setCantidad('');
-    setUnidad('');
-    setCostoUnitario('');
-    setCostoTotal('');
-    setUbicacion('');
-    setNotas('');
+    if (!unidad) {
+      alert('Selecciona la unidad');
+      return;
+    }
 
-    alert('Entrada guardada 🔥');
-  } catch (error) {
-    console.error('Error inesperado:', error);
-    alert('Algo falló al guardar la entrada');
-  } finally {
-    setCargando(false);
-  }
-};
+    if (!ubicacion) {
+      alert('Selecciona la ubicación');
+      return;
+    }
 
+    setCargando(true);
+
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const usuarioId = userData.user?.id;
+      const productoNormalizado = producto.trim().toLowerCase();
+
+      const cantidadNum = convertirNumero(cantidad);
+      const costoUnitarioNum = convertirNumero(costoUnitario);
+      const costoTotalNum = convertirNumero(costoTotal);
+
+      if (cantidadNum <= 0) {
+        alert('La cantidad debe ser mayor a 0');
+        setCargando(false);
+        return;
+      }
+
+      let costoUnitarioFinal = 0;
+      let costoTotalFinal = 0;
+
+      if (costoUnitarioNum > 0 && costoTotalNum > 0) {
+        costoUnitarioFinal = redondear2(costoUnitarioNum);
+        costoTotalFinal = redondear2(costoTotalNum);
+      } else if (costoUnitarioNum > 0) {
+        costoUnitarioFinal = redondear2(costoUnitarioNum);
+        costoTotalFinal = redondear2(cantidadNum * costoUnitarioNum);
+      } else if (costoTotalNum > 0) {
+        costoTotalFinal = redondear2(costoTotalNum);
+        costoUnitarioFinal = redondear2(costoTotalNum / cantidadNum);
+      }
+
+      const { data: nuevaEntrada, error: errorEntrada } = await supabase
+        .from('entradas')
+        .insert([
+          {
+            proveedor: proveedor.trim() || null,
+            numero_factura: numeroFactura.trim() || null,
+            fecha: fecha || null,
+            producto: productoNormalizado,
+            cantidad: cantidadNum,
+            unidad,
+            costo_unitario: costoUnitarioFinal > 0 ? costoUnitarioFinal : null,
+            costo_total: costoTotalFinal > 0 ? costoTotalFinal : null,
+            ubicacion,
+            notas: notas.trim() || null,
+            creado_por: usuarioId || null,
+            foto_pieza: null,
+            foto_factura: null,
+            origen: 'USA',
+          },
+        ])
+        .select()
+        .single();
+
+      if (errorEntrada) {
+        console.error('Error entrada:', errorEntrada);
+        alert('Error al guardar la entrada: ' + errorEntrada.message);
+        setCargando(false);
+        return;
+      }
+
+      const { data: inventarioExistente, error: errorInventario } =
+        await supabase
+          .from('inventario')
+          .select('*')
+          .eq('producto', productoNormalizado)
+          .eq('origen', 'USA')
+          .maybeSingle();
+
+      if (errorInventario) {
+        console.error('Error inventario:', errorInventario);
+        alert('Error buscando inventario: ' + errorInventario.message);
+        setCargando(false);
+        return;
+      }
+
+      if (inventarioExistente) {
+        const cantidadAnterior = Number(inventarioExistente.cantidad_actual || 0);
+        const valorAnterior = Number(inventarioExistente.valor_inventario || 0);
+        const costoAnterior = Number(inventarioExistente.costo_unitario || 0);
+
+        const nuevaCantidad = redondear2(cantidadAnterior + cantidadNum);
+        const nuevoValorInventario = redondear2(valorAnterior + costoTotalFinal);
+
+        let nuevoCostoUnitario = costoAnterior;
+
+        if (nuevaCantidad > 0 && nuevoValorInventario > 0) {
+          nuevoCostoUnitario = redondear2(nuevoValorInventario / nuevaCantidad);
+        } else if (costoUnitarioFinal > 0) {
+          nuevoCostoUnitario = costoUnitarioFinal;
+        }
+
+        const { error: errorUpdate } = await supabase
+          .from('inventario')
+          .update({
+            cantidad_actual: nuevaCantidad,
+            unidad,
+            ubicacion,
+            origen: 'USA',
+            costo_unitario: nuevoCostoUnitario > 0 ? nuevoCostoUnitario : null,
+            valor_inventario:
+              nuevoValorInventario > 0 ? nuevoValorInventario : null,
+          })
+          .eq('id', inventarioExistente.id);
+
+        if (errorUpdate) {
+          console.error('Error update inventario:', errorUpdate);
+          alert('Error actualizando inventario: ' + errorUpdate.message);
+          setCargando(false);
+          return;
+        }
+      } else {
+        const { error: errorInsert } = await supabase.from('inventario').insert([
+          {
+            producto: productoNormalizado,
+            cantidad_actual: cantidadNum,
+            unidad,
+            ubicacion,
+            origen: 'USA',
+            costo_unitario: costoUnitarioFinal > 0 ? costoUnitarioFinal : null,
+            valor_inventario: costoTotalFinal > 0 ? costoTotalFinal : null,
+          },
+        ]);
+
+        if (errorInsert) {
+          console.error('Error insert inventario:', errorInsert);
+          alert('Error creando inventario: ' + errorInsert.message);
+          setCargando(false);
+          return;
+        }
+      }
+
+      if (nuevaEntrada) {
+        setUltimaEntrada(nuevaEntrada);
+      }
+
+      setProveedor('');
+      setNumeroFactura('');
+      setFecha('');
+      setProducto('');
+      setCantidad('');
+      setUnidad('');
+      setCostoUnitario('');
+      setCostoTotal('');
+      setUbicacion('');
+      setNotas('');
+
+      alert('Entrada guardada 🔥');
+      await cargarUltimaEntrada();
+    } catch (error) {
+      console.error('Error inesperado:', error);
+      alert('Algo falló al guardar la entrada');
+    } finally {
+      setCargando(false);
+    }
+  };
 
   return (
     <main
@@ -261,19 +310,18 @@ if (inventarioExistente) {
           </div>
 
           <button
-  onClick={() => router.push('/dashboard')}
-  style={{
-    marginBottom: 10,
-    background: 'none',
-    border: 'none',
-    color: '#1E40AF',
-    fontWeight: 600,
-    cursor: 'pointer',
-  }}
->
-  ← Inicio
-</button>
-
+            onClick={() => router.push('/dashboard')}
+            style={{
+              marginBottom: 10,
+              background: 'none',
+              border: 'none',
+              color: '#1E40AF',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            ← Inicio
+          </button>
 
           <h2
             style={{
@@ -285,7 +333,6 @@ if (inventarioExistente) {
             }}
           >
             Entrada <span className="fi fi-us" style={{ marginLeft: 8 }}></span>
-
           </h2>
 
           <div
@@ -298,9 +345,7 @@ if (inventarioExistente) {
             <h4 style={estiloTituloSeccion}>Factura</h4>
 
             <div style={{ marginBottom: 16 }}>
-              <p style={{ marginBottom: 8, fontWeight: 600 }}>
-                Foto de factura
-              </p>
+              <p style={{ marginBottom: 8, fontWeight: 600 }}>Foto de factura</p>
 
               <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
                 <button
