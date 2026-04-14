@@ -84,7 +84,7 @@ const valorUSA = inventarioFiltrado
   .filter((item) => item.origen === 'USA')
   .reduce((acc, item) => acc + Number(item.valor_inventario || 0), 0);
 
-const valorTotal = valorMX + valorUSA;
+
 
   return (
     <main
@@ -139,10 +139,8 @@ const valorTotal = valorMX + valorUSA;
           style={{
             display: 'grid',
             gridTemplateColumns: esCel
-              ? '1fr'
-              : esAdmin
-              ? 'repeat(3, 1fr)'
-              : 'repeat(2, 1fr)',
+  ? '1fr'
+  : 'repeat(4, minmax(0, 1fr))',
             gap: 12,
             marginBottom: 16,
           }}
@@ -170,13 +168,6 @@ const valorTotal = valorMX + valorUSA;
       <div style={resumenLabelStyle}>Valor USA 🇺🇸</div>
       <div style={resumenValueStyle}>
         ${valorUSA.toLocaleString()}
-      </div>
-    </div>
-
-    <div style={resumenCardStyle}>
-      <div style={resumenLabelStyle}>Total</div>
-      <div style={resumenValueStyle}>
-        ${valorTotal.toLocaleString()}
       </div>
     </div>
   </>
@@ -317,14 +308,22 @@ const valorTotal = valorMX + valorUSA;
                         <td style={cellStyle}>{item.valor_inventario ?? '—'}</td>
                       )}
                       <td style={cellStyle}>
-                        {item.origen === 'MX' ? (
-                          <span className="fi fi-mx"></span>
-                        ) : item.origen === 'USA' ? (
-                          <span className="fi fi-us"></span>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
+  <div
+    style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}
+  >
+    {item.origen === 'MX' ? (
+      <span className="fi fi-mx"></span>
+    ) : item.origen === 'USA' ? (
+      <span className="fi fi-us"></span>
+    ) : (
+      <span style={{ color: '#94A3B8' }}>—</span>
+    )}
+  </div>
+</td>
                     </tr>
                   ))}
                 </tbody>
@@ -362,6 +361,7 @@ const resumenLabelStyle: React.CSSProperties = {
   fontSize: 13,
   color: '#64748B',
   marginBottom: 6,
+  whiteSpace: 'nowrap',
 };
 
 const resumenValueStyle: React.CSSProperties = {
