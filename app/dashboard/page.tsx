@@ -25,29 +25,31 @@ export default function DashboardPage() {
   const [esCel, setEsCel] = useState(false);
 
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data } = await supabase.auth.getUser();
+  const checkUser = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-        if (!data.user) {
-          router.push('/login');
-          return;
-        }
-
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('nombre, rol')
-          .eq('id', data.user.id)
-          .single();
-
-        setProfile((profileData as Profile | null) ?? null);
-      } finally {
-        setLoading(false);
+      if (!session?.user) {
+        router.push('/login');
+        return;
       }
-    };
 
-    void checkUser();
-  }, [router]);
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('nombre, rol')
+        .eq('id', session.user.id)
+        .single();
+
+      setProfile((profileData as Profile | null) ?? null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  void checkUser();
+}, [router]);
 
   useEffect(() => {
     const revisarPantalla = () => {
