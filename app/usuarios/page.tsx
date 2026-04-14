@@ -3,6 +3,7 @@
 import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getAuthEmailRedirectUrl } from "@/lib/auth-redirect";
 
 type Rol = "admin" | "manager" | "viewer";
 
@@ -16,10 +17,47 @@ type Usuario = {
   debe_cambiar_password: boolean;
 };
 
+function getSupabaseErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const m = (error as { message: unknown }).message;
+    if (typeof m === "string" && m.length > 0) return m;
+  }
+  return "Error desconocido";
+}
+
+function mapProfileRow(row: Record<string, unknown>): Usuario | null {
+  if (row.id === undefined || row.id === null) return null;
+  const rawRol = String(row.rol ?? row.role ?? "viewer").toLowerCase();
+  const rol: Rol = ["admin", "manager", "viewer"].includes(rawRol)
+    ? (rawRol as Rol)
+    : "viewer";
+  const activo =
+    row.activo === undefined || row.activo === null
+      ? true
+      : row.activo === true || row.activo === 1 || row.activo === "true";
+  const debe =
+    row.debe_cambiar_password === undefined || row.debe_cambiar_password === null
+      ? false
+      : row.debe_cambiar_password === true ||
+        row.debe_cambiar_password === 1 ||
+        row.debe_cambiar_password === "true";
+  return {
+    id: String(row.id),
+    nombre: String(row.nombre ?? row.name ?? ""),
+    email: String(row.email ?? ""),
+    username: String(row.username ?? row.user_name ?? ""),
+    rol,
+    activo,
+    debe_cambiar_password: debe,
+  };
+}
+
 export default function UsuariosPage() {
   const router = useRouter();
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [cargaError, setCargaError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [esCel, setEsCel] = useState(false);
@@ -42,21 +80,27 @@ export default function UsuariosPage() {
   const cargarUsuarios = async () => {
     try {
       setLoading(true);
+      setCargaError(null);
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, nombre, email, username, rol, activo, debe_cambiar_password")
-        .order("nombre", { ascending: true });
+        .select("*")
+        .order("id", { ascending: true });
 
       if (error) {
         throw error;
       }
 
-      setUsuarios((data as Usuario[]) ?? []);
+      const rows = (data as Record<string, unknown>[]) ?? [];
+      const mapped = rows
+        .map((row) => mapProfileRow(row))
+        .filter((u): u is Usuario => u !== null);
+      setUsuarios(mapped);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Error al cargar usuarios";
-      alert(message);
+      const detail = getSupabaseErrorMessage(error);
+      setCargaError(detail);
+      setUsuarios([]);
+      console.error("profiles select:", error);
     } finally {
       setLoading(false);
     }
@@ -95,12 +139,15 @@ export default function UsuariosPage() {
     try {
       setSubmitting(true);
 
-      const { data: authData, error: signUpError } = await supabase.auth.signUp(
-        {
-          email: email.trim(),
-          password,
-        }
-      );
+      const emailRedirectTo = getAuthEmailRedirectUrl("/dashboard");
+
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          ...(emailRedirectTo ? { emailRedirectTo } : {}),
+        },
+      });
 
       if (signUpError) {
         throw signUpError;
@@ -129,9 +176,7 @@ export default function UsuariosPage() {
       await cargarUsuarios();
       alert("Usuario creado correctamente.");
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Error al crear el usuario";
-      alert(message);
+      alert(getSupabaseErrorMessage(error) || "Error al crear el usuario");
     } finally {
       setSubmitting(false);
     }
@@ -174,6 +219,20 @@ export default function UsuariosPage() {
         </button>
 
         <h1 style={styles.title}>Gestión de Usuarios</h1>
+
+        {cargaError && (
+          <div style={styles.errorBanner}>
+            <p style={{ margin: 0, fontWeight: 600 }}>No se pudo cargar la lista</p>
+            <p style={{ margin: "8px 0 0 0", fontSize: 14 }}>{cargaError}</p>
+            <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
+              Si ves “permission denied” o código 42501, en Supabase revisa políticas RLS
+              de la tabla <code>profiles</code> (SELECT para usuarios autenticados).
+            </p>
+            <button type="button" onClick={() => void cargarUsuarios()} style={styles.retryButton}>
+              Reintentar
+            </button>
+          </div>
+        )}
 
         <form onSubmit={crearUsuario} style={styles.form}>
           <h2 style={styles.sectionTitle}>Crear nuevo usuario</h2>
@@ -236,6 +295,8 @@ export default function UsuariosPage() {
 
           {loading ? (
             <p>Cargando usuarios...</p>
+          ) : cargaError ? (
+            <div style={styles.emptyCell}>Corrige el error arriba y pulsa Reintentar.</div>
           ) : usuarios.length === 0 ? (
             <div style={styles.emptyCell}>No hay usuarios registrados.</div>
           ) : esCel ? (
@@ -332,6 +393,24 @@ const styles: Record<string, CSSProperties> = {
   title: {
     marginBottom: "16px",
     fontSize: "28px",
+  },
+  errorBanner: {
+    marginBottom: "16px",
+    padding: "14px",
+    borderRadius: "10px",
+    border: "1px solid #fecaca",
+    backgroundColor: "#fef2f2",
+    color: "#991b1b",
+  },
+  retryButton: {
+    marginTop: "12px",
+    padding: "8px 14px",
+    borderRadius: "8px",
+    border: "1px solid #991b1b",
+    backgroundColor: "#ffffff",
+    color: "#991b1b",
+    fontWeight: 600,
+    cursor: "pointer",
   },
   backButton: {
     marginBottom: "10px",

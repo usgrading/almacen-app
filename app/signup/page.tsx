@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthEmailRedirectUrl } from '@/lib/auth-redirect';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,10 +36,13 @@ export default function SignupPage() {
     try {
       setLoading(true);
 
+      const emailRedirectTo = getAuthEmailRedirectUrl('/dashboard');
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          ...(emailRedirectTo ? { emailRedirectTo } : {}),
           data: {
             name,
           },
