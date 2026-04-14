@@ -9,6 +9,8 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 );
 
+type FiltroOrigen = 'TODOS' | 'MX' | 'USA';
+
 type InventarioItem = {
   id: string | number;
   producto?: string | null;
@@ -25,6 +27,7 @@ export default function InventarioPage() {
   const [inventario, setInventario] = useState<InventarioItem[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [esCel, setEsCel] = useState(false);
+  const [filtroOrigen, setFiltroOrigen] = useState<FiltroOrigen>('TODOS');
 
   // TODO: luego esto debe venir del perfil del usuario
   const esAdmin = true;
@@ -58,7 +61,13 @@ export default function InventarioPage() {
   const inventarioFiltrado = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
 
-    const base = [...inventario].sort((a, b) =>
+    let base = [...inventario];
+
+    if (filtroOrigen !== 'TODOS') {
+      base = base.filter((item) => item.origen === filtroOrigen);
+    }
+
+    base.sort((a, b) =>
       String(a.producto || '').localeCompare(String(b.producto || ''), 'es', {
         sensitivity: 'base',
       })
@@ -79,7 +88,7 @@ export default function InventarioPage() {
         origen.includes(texto)
       );
     });
-  }, [inventario, busqueda]);
+  }, [inventario, busqueda, filtroOrigen]);
 
   const totalProductos = inventarioFiltrado.length;
 
@@ -210,6 +219,35 @@ export default function InventarioPage() {
               </div>
             </>
           )}
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            marginBottom: 12,
+          }}
+        >
+          <button
+            onClick={() => setFiltroOrigen('TODOS')}
+            style={getFiltroStyle(filtroOrigen === 'TODOS')}
+          >
+            Todos
+          </button>
+
+          <button
+            onClick={() => setFiltroOrigen('MX')}
+            style={getFiltroStyle(filtroOrigen === 'MX')}
+          >
+            🇲🇽 MX
+          </button>
+
+          <button
+            onClick={() => setFiltroOrigen('USA')}
+            style={getFiltroStyle(filtroOrigen === 'USA')}
+          >
+            🇺🇸 USA
+          </button>
         </div>
 
         <input
@@ -380,6 +418,17 @@ function renderValor(value: unknown): string {
   if (!hasRealValue(value)) return 'Sin valor';
   return formatMoney(toNumber(value));
 }
+
+const getFiltroStyle = (activo: boolean): React.CSSProperties => ({
+  flex: 1,
+  padding: 10,
+  borderRadius: 8,
+  border: activo ? '2px solid #1E40AF' : '1px solid #D1D5DB',
+  background: activo ? '#DBEAFE' : '#FFFFFF',
+  color: '#1F2937',
+  fontWeight: 600,
+  cursor: 'pointer',
+});
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
