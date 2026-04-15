@@ -73,7 +73,7 @@ export default function UsuariosPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [rol, setRol] = useState<Rol>("viewer");
+  const [rol, setRol] = useState<Rol>("admin");
 
   const canSubmit = useMemo(() => {
     return (
@@ -194,16 +194,19 @@ export default function UsuariosPage() {
         throw new Error("No se pudo determinar tu organización. Vuelve a iniciar sesión.");
       }
 
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: userId,
-        organization_id: orgId,
-        email: email.trim(),
-        username: username.trim(),
-        nombre: nombre.trim(),
-        rol,
-        activo: true,
-        debe_cambiar_password: true,
-      });
+      const rolFinal: Rol = usuarios.length === 0 ? "admin" : rol;
+
+const { error: profileError } = await supabase.from("profiles").insert({
+  id: userId,
+  organization_id: orgId,
+  email: email.trim(),
+  username: username.trim(),
+  nombre: nombre.trim(),
+  rol: rolFinal,
+  activo: true,
+  debe_cambiar_password: true,
+});
+
 
       if (profileError) {
         throw profileError;
