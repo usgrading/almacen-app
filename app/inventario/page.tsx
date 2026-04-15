@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { canMutateStock, getUserRole, type AppRole } from '@/lib/roles';
+import { canMutate, getUserRole, isViewer, type AppRole } from '@/lib/roles';
 
 type FiltroOrigen = 'TODOS' | 'MX' | 'USA';
 
@@ -29,7 +29,8 @@ export default function InventarioPage() {
   const [rolListo, setRolListo] = useState(false);
 
   /** Admin y manager ven montos; viewer solo listado sin valores financieros. */
-  const puedeVerMontos = rolListo && canMutateStock(appRole);
+  const puedeVerMontos = rolListo && canMutate(appRole);
+  const modoSoloLectura = rolListo && isViewer(appRole);
 
   useEffect(() => {
     const cargarInventario = async () => {
@@ -213,6 +214,20 @@ export default function InventarioPage() {
         >
           Inventario
         </h2>
+
+        {modoSoloLectura && (
+          <p
+            style={{
+              margin: '0 0 14px 0',
+              textAlign: 'center',
+              color: '#B45309',
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            Modo solo lectura
+          </p>
+        )}
 
         <div
           style={{

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { canMutateStock, getUserRole, type AppRole } from '@/lib/roles';
+import { canMutate, getUserRole, isViewer, type AppRole } from '@/lib/roles';
 
 type EntradaResumen = {
   producto?: string | null;
@@ -125,7 +125,8 @@ export default function EntradasPage() {
     return Math.round(valor * 100) / 100;
   };
 
-  const puedeRegistrar = rolListo && canMutateStock(appRole);
+  const puedeRegistrar = rolListo && canMutate(appRole);
+  const modoSoloLectura = rolListo && isViewer(appRole);
 
   const handleSubmit = async () => {
     if (!puedeRegistrar) {
@@ -456,6 +457,20 @@ export default function EntradasPage() {
           >
             Entrada <span className="fi fi-us" style={{ marginLeft: 8 }}></span>
           </h2>
+
+          {modoSoloLectura && (
+            <p
+              style={{
+                margin: '0 0 14px 0',
+                textAlign: 'center',
+                color: '#B45309',
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              Modo solo lectura
+            </p>
+          )}
 
           <div
             style={{

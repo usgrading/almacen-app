@@ -37,7 +37,7 @@ function mismoUuid(a: unknown, b: unknown): boolean {
 function mapProfileRow(row: Record<string, unknown>): Usuario | null {
   if (row.id === undefined || row.id === null) return null;
 
-  const rawRol = String(row.rol ?? row.role ?? "viewer").toLowerCase();
+  const rawRol = String(row.rol ?? "viewer").toLowerCase();
 
   const rol: Rol = ["admin", "manager", "viewer"].includes(rawRol)
     ? (rawRol as Rol)

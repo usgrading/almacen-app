@@ -84,7 +84,6 @@ export async function POST(req: NextRequest) {
         email,
         username,
         rol: rolFinal,
-        role: rolFinal,
         activo: true,
         debe_cambiar_password: false,
       },

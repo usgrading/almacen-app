@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     const { data: inviterProfile, error: inviterProfileError } = await admin
       .from("profiles")
-      .select("organization_id, role, rol")
+      .select("organization_id, rol")
       .eq("id", inviter.id)
       .maybeSingle();
 
@@ -51,11 +51,10 @@ export async function POST(req: NextRequest) {
 
     const inviterRow = inviterProfile as {
       organization_id?: string | null;
-      role?: string | null;
       rol?: string | null;
     } | null;
 
-    const inviterRole = normalizeRole(inviterRow?.role ?? inviterRow?.rol ?? null);
+    const inviterRole = normalizeRole(inviterRow?.rol ?? null);
     if (!canManageUsers(inviterRole)) {
       return NextResponse.json(
         { error: "Solo un administrador puede crear usuarios." },
@@ -102,7 +101,6 @@ export async function POST(req: NextRequest) {
         email,
         username: usernameFinal,
         rol: rolFinal,
-        role: rolFinal,
         activo: true,
         debe_cambiar_password: true,
       },

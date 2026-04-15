@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Roles permitidos en `profiles.role` / `profiles.rol`. */
+/** Valores permitidos en `profiles.rol`. */
 export type AppRole = "admin" | "manager" | "viewer";
 
 export function normalizeRole(raw: string | null | undefined): AppRole {
@@ -12,7 +12,7 @@ export function normalizeRole(raw: string | null | undefined): AppRole {
 }
 
 /**
- * Rol efectivo del usuario autenticado (lee `role` y cae a `rol` por compatibilidad).
+ * Rol efectivo del usuario autenticado (solo `profiles.rol`).
  */
 export async function getUserRole(client: SupabaseClient): Promise<AppRole | null> {
   const {
@@ -23,34 +23,34 @@ export async function getUserRole(client: SupabaseClient): Promise<AppRole | nul
 
   const { data, error } = await client
     .from("profiles")
-    .select("role, rol")
+    .select("rol")
     .eq("id", uid)
     .maybeSingle();
 
   if (error || !data) return null;
 
-  const row = data as { role?: string | null; rol?: string | null };
-  return normalizeRole(row.role ?? row.rol ?? null);
+  const row = data as { rol?: string | null };
+  return normalizeRole(row.rol ?? null);
 }
 
-export function isAdmin(role: AppRole | null): boolean {
-  return role === "admin";
+export function isAdmin(rol: AppRole | null): boolean {
+  return rol === "admin";
 }
 
-export function isManager(role: AppRole | null): boolean {
-  return role === "manager";
+export function isManager(rol: AppRole | null): boolean {
+  return rol === "manager";
 }
 
-export function isViewer(role: AppRole | null): boolean {
-  return role === "viewer";
+export function isViewer(rol: AppRole | null): boolean {
+  return rol === "viewer";
 }
 
 /** Inventario, entradas, salidas: admin y manager. */
-export function canMutateStock(role: AppRole | null): boolean {
-  return role === "admin" || role === "manager";
+export function canMutate(rol: AppRole | null): boolean {
+  return rol === "admin" || rol === "manager";
 }
 
 /** Alta de usuarios y /usuarios: solo admin. */
-export function canManageUsers(role: AppRole | null): boolean {
-  return role === "admin";
+export function canManageUsers(rol: AppRole | null): boolean {
+  return rol === "admin";
 }

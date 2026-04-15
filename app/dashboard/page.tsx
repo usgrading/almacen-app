@@ -10,19 +10,18 @@ import { isAdmin, normalizeRole, type AppRole } from '@/lib/roles';
 type Profile = {
   nombre: string | null;
   rol: string | null;
-  role?: string | null;
 };
 
-function getRoleLabel(role: string | null) {
-  if (role === 'admin') return 'Administrador';
-  if (role === 'manager') return 'Manager';
-  if (role === 'viewer') return 'Usuario';
+function etiquetaRol(rol: string | null) {
+  if (rol === 'admin') return 'Administrador';
+  if (rol === 'manager') return 'Manager';
+  if (rol === 'viewer') return 'Usuario';
   return '';
 }
 
 function labelFromProfile(p: Profile | null): string {
   if (!p) return '';
-  return getRoleLabel((p.role ?? p.rol) as string | null);
+  return etiquetaRol(p.rol);
 }
 
 export default function DashboardPage() {
@@ -49,13 +48,13 @@ export default function DashboardPage() {
 
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('nombre, rol, role')
+        .select('nombre, rol')
         .eq('id', session.user.id)
         .single();
 
       const p = (profileData as Profile | null) ?? null;
       setProfile(p);
-      setAppRole(normalizeRole(p?.role ?? p?.rol ?? null));
+      setAppRole(normalizeRole(p?.rol ?? null));
     } finally {
       setLoading(false);
     }
