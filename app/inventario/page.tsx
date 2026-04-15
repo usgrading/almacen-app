@@ -145,20 +145,45 @@ export default function InventarioPage() {
       }}
     >
       <div style={{ maxWidth: esCel ? 520 : 1100, margin: '0 auto' }}>
-        <button
-          onClick={() => router.push('/dashboard')}
+        <div
           style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
             marginBottom: 10,
-            background: 'none',
-            border: 'none',
-            color: '#1E40AF',
-            fontWeight: 600,
-            cursor: 'pointer',
-            padding: 0,
           }}
         >
-          ← Inicio
-        </button>
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#1E40AF',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          >
+            ← Inicio
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/reportes')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#1E40AF',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          >
+            Reportes →
+          </button>
+        </div>
 
         <div style={{ textAlign: 'center', marginBottom: 12 }}>
           <img

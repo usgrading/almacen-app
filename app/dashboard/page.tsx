@@ -193,16 +193,9 @@ export default function DashboardPage() {
 
             <button
               onClick={() => router.push('/inventario')}
-              style={buttonStyle}
-            >
-              Inventario
-            </button>
-
-            <button
-              onClick={() => router.push('/reportes')}
               style={{ ...buttonStyle, textAlign: 'center' }}
             >
-              Reportes
+              Inventario y reportes
             </button>
 
             <button
