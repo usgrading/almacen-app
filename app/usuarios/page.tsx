@@ -27,6 +27,12 @@ function getSupabaseErrorMessage(error: unknown): string {
   return "Error desconocido";
 }
 
+function mismoUuid(a: unknown, b: unknown): boolean {
+  const sa = typeof a === "string" ? a.toLowerCase() : "";
+  const sb = typeof b === "string" ? b.toLowerCase() : "";
+  return sa.length > 0 && sa === sb;
+}
+
 function mapProfileRow(row: Record<string, unknown>): Usuario | null {
   if (row.id === undefined || row.id === null) return null;
   const rawRol = String(row.rol ?? row.role ?? "viewer").toLowerCase();
@@ -83,6 +89,14 @@ export default function UsuariosPage() {
       setLoading(true);
       setCargaError(null);
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        router.push("/login");
+        return;
+      }
+
       await ensureMiOrganizationId(supabase);
       const orgId = await getMiOrganizationId(supabase);
       if (!orgId) {
@@ -102,7 +116,8 @@ export default function UsuariosPage() {
       }
 
       const rows = (data as Record<string, unknown>[]) ?? [];
-      const mapped = rows
+      const filtradas = rows.filter((row) => mismoUuid(row.organization_id, orgId));
+      const mapped = filtradas
         .map((row) => mapProfileRow(row))
         .filter((u): u is Usuario => u !== null);
       setUsuarios(mapped);
@@ -255,8 +270,9 @@ export default function UsuariosPage() {
               </p>
             ) : (
               <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
-                Si ves permiso denegado o código 42501, revisa RLS de{" "}
-                <code>profiles</code> en Supabase (SELECT para usuarios autenticados).
+                Si ves usuarios de otras cuentas o permisos raros, ejecuta en Supabase el SQL de{" "}
+                <code>20260216120000_profiles_rls_by_organization.sql</code> (RLS por organización)
+                y revisa que cada perfil tenga el <code>organization_id</code> correcto.
               </p>
             )}
             <button type="button" onClick={() => void cargarUsuarios()} style={styles.retryButton}>
