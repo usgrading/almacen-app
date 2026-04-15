@@ -11,6 +11,8 @@ import {
   reporteTheadRow,
 } from '@/components/ReporteLayout';
 import { filtrarAlertasInventario } from '@/lib/alertas-inventario';
+import { ReporteExportarExcelButton } from '@/components/ReporteExportarExcelButton';
+import { exportarAExcel } from '@/lib/export-excel';
 
 type InventarioItem = {
   id: string | number;
@@ -63,9 +65,49 @@ export default function ReporteAlertaInventarioPage() {
     [inventario]
   );
 
+  const exportar = () => {
+    const filas = alertas.map((item) => ({
+      producto: item.producto ?? '',
+      origen: item.origen ?? '',
+      cantidad_actual: item.cantidad_actual ?? 0,
+      minimo: item.minimo ?? '',
+      maximo: item.maximo ?? '',
+      unidad: item.unidad ?? '',
+      ubicacion: item.ubicacion ?? '',
+    }));
+    exportarAExcel(
+      filas,
+      [
+        { clave: 'producto', encabezado: 'Producto' },
+        { clave: 'origen', encabezado: 'Origen' },
+        { clave: 'cantidad_actual', encabezado: 'Cantidad actual' },
+        { clave: 'minimo', encabezado: 'Mínimo' },
+        { clave: 'maximo', encabezado: 'Máximo' },
+        { clave: 'unidad', encabezado: 'Unidad' },
+        { clave: 'ubicacion', encabezado: 'Ubicación' },
+      ],
+      'alertas',
+      'Alertas'
+    );
+  };
+
   return (
     <ReporteLayout title="Alerta de inventario" subtitle={subtituloAlerta}>
-      {loading ? (
+      <>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginBottom: 12,
+            padding: '0 4px',
+          }}
+        >
+          <ReporteExportarExcelButton
+            disabled={loading || alertas.length === 0}
+            onClick={exportar}
+          />
+        </div>
+        {loading ? (
         <div style={reporteLoadingBox}>Cargando...</div>
       ) : alertas.length === 0 ? (
         <div style={reporteEmptyBox}>
@@ -108,7 +150,8 @@ export default function ReporteAlertaInventarioPage() {
             </tbody>
           </table>
         </div>
-      )}
+        )}
+      </>
     </ReporteLayout>
   );
 }

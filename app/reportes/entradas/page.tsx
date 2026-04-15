@@ -10,6 +10,8 @@ import {
   reporteTh,
   reporteTheadRow,
 } from '@/components/ReporteLayout';
+import { ReporteExportarExcelButton } from '@/components/ReporteExportarExcelButton';
+import { exportarAExcel, formatearFechaExcel } from '@/lib/export-excel';
 
 type Entrada = {
   id: string | number;
@@ -46,14 +48,50 @@ export default function ReporteEntradasPage() {
     void cargar();
   }, []);
 
+  const exportar = () => {
+    const filas = entradas.map((e) => ({
+      producto: e.producto ?? '',
+      cantidad: e.cantidad ?? 0,
+      unidad: e.unidad ?? '',
+      origen: e.origen ?? '',
+      fecha: formatearFechaExcel(e.creado_en),
+    }));
+    exportarAExcel(
+      filas,
+      [
+        { clave: 'producto', encabezado: 'Producto' },
+        { clave: 'cantidad', encabezado: 'Cantidad' },
+        { clave: 'unidad', encabezado: 'Unidad' },
+        { clave: 'origen', encabezado: 'Origen' },
+        { clave: 'fecha', encabezado: 'Fecha' },
+      ],
+      'entradas',
+      'Entradas'
+    );
+  };
+
   return (
     <ReporteLayout title="Reporte de Entradas">
-      {loading ? (
-        <div style={reporteLoadingBox}>Cargando...</div>
-      ) : entradas.length === 0 ? (
-        <div style={reporteEmptyBox}>No hay entradas registradas.</div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
+      <>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginBottom: 12,
+            padding: '0 4px',
+          }}
+        >
+          <ReporteExportarExcelButton
+            disabled={loading || entradas.length === 0}
+            onClick={exportar}
+          />
+        </div>
+        {loading ? (
+          <div style={reporteLoadingBox}>Cargando...</div>
+        ) : entradas.length === 0 ? (
+          <div style={reporteEmptyBox}>No hay entradas registradas.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
             <thead>
               <tr style={reporteTheadRow}>
@@ -82,7 +120,8 @@ export default function ReporteEntradasPage() {
             </tbody>
           </table>
         </div>
-      )}
+        )}
+      </>
     </ReporteLayout>
   );
 }

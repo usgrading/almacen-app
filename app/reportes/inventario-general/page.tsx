@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ReporteLayout } from '@/components/ReporteLayout';
+import { ReporteExportarExcelButton } from '@/components/ReporteExportarExcelButton';
+import { exportarAExcel } from '@/lib/export-excel';
 
 type FiltroOrigen = 'TODOS' | 'MX' | 'USA';
 
@@ -128,8 +130,52 @@ export default function InventarioPage() {
     return <span style={{ color: '#94A3B8' }}>—</span>;
   };
 
+  const exportar = () => {
+    const filas = inventarioFiltrado.map((item) => {
+      const fila: Record<string, unknown> = {
+        producto: item.producto ?? '',
+        cantidad_actual: toNumber(item.cantidad_actual),
+        unidad: item.unidad ?? '',
+        ubicacion: item.ubicacion ?? '',
+        origen: item.origen ?? '',
+      };
+      if (esAdmin) {
+        fila.valor_total = renderValor(
+          item.valor_inventario,
+          item.cantidad_actual,
+          item.costo_unitario
+        );
+      }
+      return fila;
+    });
+    const columnas: { clave: string; encabezado: string }[] = [
+      { clave: 'producto', encabezado: 'Producto' },
+      { clave: 'cantidad_actual', encabezado: 'Cantidad actual' },
+      { clave: 'unidad', encabezado: 'Unidad' },
+      { clave: 'ubicacion', encabezado: 'Ubicación' },
+    ];
+    if (esAdmin) {
+      columnas.push({ clave: 'valor_total', encabezado: 'Valor total' });
+    }
+    columnas.push({ clave: 'origen', encabezado: 'Origen' });
+    exportarAExcel(filas, columnas, 'inventario', 'Inventario');
+  };
+
   return (
     <ReporteLayout title="Inventario general" noCard>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginBottom: 16,
+          }}
+        >
+          <ReporteExportarExcelButton
+            disabled={inventarioFiltrado.length === 0}
+            onClick={exportar}
+          />
+        </div>
+
         <div
           style={{
             display: 'grid',

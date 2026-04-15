@@ -11,6 +11,8 @@ import {
   reporteTh,
   reporteTheadRow,
 } from '@/components/ReporteLayout';
+import { ReporteExportarExcelButton } from '@/components/ReporteExportarExcelButton';
+import { exportarAExcel, formatearFechaExcel } from '@/lib/export-excel';
 
 type Salida = {
   id: string | number;
@@ -56,14 +58,52 @@ export default function ReporteSalidasPage() {
     void cargar();
   }, []);
 
+  const exportar = () => {
+    const filas = salidas.map((s) => ({
+      producto: s.producto ?? '',
+      cantidad: s.cantidad ?? 0,
+      unidad: s.unidad ?? '',
+      origen: s.origen ?? '',
+      destino: s.destino ?? '',
+      fecha: formatearFechaExcel(s.created_at),
+    }));
+    exportarAExcel(
+      filas,
+      [
+        { clave: 'producto', encabezado: 'Producto' },
+        { clave: 'cantidad', encabezado: 'Cantidad' },
+        { clave: 'unidad', encabezado: 'Unidad' },
+        { clave: 'origen', encabezado: 'Origen' },
+        { clave: 'destino', encabezado: 'Destino' },
+        { clave: 'fecha', encabezado: 'Fecha' },
+      ],
+      'salidas',
+      'Salidas'
+    );
+  };
+
   return (
     <ReporteLayout title="Reporte de Salidas">
-      {loading ? (
-        <div style={reporteLoadingBox}>Cargando...</div>
-      ) : salidas.length === 0 ? (
-        <div style={reporteEmptyBox}>No hay salidas registradas.</div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
+      <>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginBottom: 12,
+            padding: '0 4px',
+          }}
+        >
+          <ReporteExportarExcelButton
+            disabled={loading || salidas.length === 0}
+            onClick={exportar}
+          />
+        </div>
+        {loading ? (
+          <div style={reporteLoadingBox}>Cargando...</div>
+        ) : salidas.length === 0 ? (
+          <div style={reporteEmptyBox}>No hay salidas registradas.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
             <thead>
               <tr style={reporteTheadRow}>
@@ -94,7 +134,8 @@ export default function ReporteSalidasPage() {
             </tbody>
           </table>
         </div>
-      )}
+        )}
+      </>
     </ReporteLayout>
   );
 }

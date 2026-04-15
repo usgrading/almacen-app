@@ -10,6 +10,8 @@ import {
   reporteTh,
   reporteTheadRow,
 } from '@/components/ReporteLayout';
+import { ReporteExportarExcelButton } from '@/components/ReporteExportarExcelButton';
+import { exportarAExcel } from '@/lib/export-excel';
 
 type InventarioItem = {
   id: string | number;
@@ -47,6 +49,30 @@ export default function ReporteInventarioUSAPage() {
     void cargar();
   }, []);
 
+  const exportar = () => {
+    const filas = inventario.map((item) => ({
+      producto: item.producto ?? '',
+      cantidad_actual: item.cantidad_actual ?? 0,
+      unidad: item.unidad ?? '',
+      ubicacion: item.ubicacion ?? '',
+      minimo: item.minimo ?? '',
+      maximo: item.maximo ?? '',
+    }));
+    exportarAExcel(
+      filas,
+      [
+        { clave: 'producto', encabezado: 'Producto' },
+        { clave: 'cantidad_actual', encabezado: 'Cantidad' },
+        { clave: 'unidad', encabezado: 'Unidad' },
+        { clave: 'ubicacion', encabezado: 'Ubicación' },
+        { clave: 'minimo', encabezado: 'Mínimo' },
+        { clave: 'maximo', encabezado: 'Máximo' },
+      ],
+      'inventario-usa',
+      'Inventario USA'
+    );
+  };
+
   return (
     <ReporteLayout
       title={
@@ -56,7 +82,21 @@ export default function ReporteInventarioUSAPage() {
         </>
       }
     >
-      {loading ? (
+      <>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginBottom: 12,
+            padding: '0 4px',
+          }}
+        >
+          <ReporteExportarExcelButton
+            disabled={loading || inventario.length === 0}
+            onClick={exportar}
+          />
+        </div>
+        {loading ? (
         <div style={reporteLoadingBox}>Cargando...</div>
       ) : inventario.length === 0 ? (
         <div style={reporteEmptyBox}>
@@ -95,7 +135,8 @@ export default function ReporteInventarioUSAPage() {
             </tbody>
           </table>
         </div>
-      )}
+        )}
+      </>
     </ReporteLayout>
   );
 }
