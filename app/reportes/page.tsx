@@ -9,13 +9,31 @@ export default function ReportesPage() {
   return (
     <main style={styles.page}>
       <div style={{ maxWidth: 700, margin: '0 auto' }}>
-        <button
-          type="button"
-          onClick={() => router.push('/dashboard')}
-          style={styles.backButton}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            marginBottom: 10,
+          }}
         >
-          ← Inicio
-        </button>
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            style={styles.backButton}
+          >
+            ← Inicio
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/inventario')}
+            style={styles.backButton}
+          >
+            Inventario →
+          </button>
+        </div>
 
         <PageLogo />
 
