@@ -29,7 +29,7 @@ const cardShellStyle: React.CSSProperties = {
 };
 
 type ReporteLayoutProps = {
-  title: string;
+  title: ReactNode;
   subtitle?: ReactNode;
   /** Inventario general: resumen y filtros fuera de la tarjeta; la tabla va en tarjeta aparte. */
   noCard?: boolean;

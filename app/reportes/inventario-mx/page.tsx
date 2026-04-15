@@ -48,11 +48,21 @@ export default function ReporteInventarioMXPage() {
   }, []);
 
   return (
-    <ReporteLayout title="Inventario MX">
+    <ReporteLayout
+      title={
+        <>
+          Inventario{' '}
+          <span className="fi fi-mx" style={{ marginLeft: 8, fontSize: '1.15em' }} aria-hidden />
+        </>
+      }
+    >
       {loading ? (
         <div style={reporteLoadingBox}>Cargando...</div>
       ) : inventario.length === 0 ? (
-        <div style={reporteEmptyBox}>No hay inventario MX.</div>
+        <div style={reporteEmptyBox}>
+          No hay inventario{' '}
+          <span className="fi fi-mx" style={{ marginLeft: 4, fontSize: '1.1em' }} aria-hidden />.
+        </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>

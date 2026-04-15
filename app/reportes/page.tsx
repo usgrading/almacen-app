@@ -1,15 +1,38 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ReporteLayout } from '@/components/ReporteLayout';
 
-const ACCESOS_REPORTES: readonly { href: string; label: string }[] = [
+const banderaEnTarjeta: CSSProperties = {
+  marginLeft: 8,
+  fontSize: '1.25em',
+  lineHeight: 1,
+  verticalAlign: 'middle',
+};
+
+const ACCESOS_REPORTES: readonly { href: string; label: ReactNode }[] = [
   { href: '/reportes/entradas', label: 'Reporte de Entradas' },
   { href: '/reportes/salidas', label: 'Reporte de Salidas' },
   { href: '/reportes/inventario-general', label: 'Inventario General' },
-  { href: '/reportes/inventario-mx', label: 'Inventario 🇲🇽' },
-  { href: '/reportes/inventario-usa', label: 'Inventario 🇺🇸' },
+  {
+    href: '/reportes/inventario-mx',
+    label: (
+      <>
+        Inventario{' '}
+        <span className="fi fi-mx" style={banderaEnTarjeta} aria-hidden />
+      </>
+    ),
+  },
+  {
+    href: '/reportes/inventario-usa',
+    label: (
+      <>
+        Inventario{' '}
+        <span className="fi fi-us" style={banderaEnTarjeta} aria-hidden />
+      </>
+    ),
+  },
   { href: '/reportes/alerta-inventario', label: 'Alerta de inventario' },
 ];
 
@@ -51,7 +74,7 @@ const tileHover: CSSProperties = {
   transform: 'translateY(-2px)',
 };
 
-function AccesoReporte({ href, label }: { href: string; label: string }) {
+function AccesoReporte({ href, label }: { href: string; label: ReactNode }) {
   const router = useRouter();
   const [hover, setHover] = useState(false);
 
