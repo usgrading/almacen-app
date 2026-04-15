@@ -1,84 +1,89 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { ReporteLayout } from '@/components/ReporteLayout';
 
+const ACCESOS_REPORTES: readonly { href: string; label: string }[] = [
+  { href: '/reportes/entradas', label: 'Reporte de Entradas' },
+  { href: '/reportes/salidas', label: 'Reporte de Salidas' },
+  { href: '/reportes/inventario-general', label: 'Inventario General' },
+  { href: '/reportes/inventario-mx', label: 'Inventario 🇲🇽' },
+  { href: '/reportes/inventario-usa', label: 'Inventario 🇺🇸' },
+  { href: '/reportes/alerta-inventario', label: 'Alerta de inventario' },
+];
+
+const contenedorGridStyle: CSSProperties = {
+  padding: '26px 22px 28px',
+};
+
 const gridStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-  gap: 12,
+  gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))',
+  gap: 16,
+  alignItems: 'stretch',
 };
 
-const buttonStyle: CSSProperties = {
+const tileBase: CSSProperties = {
+  minHeight: 96,
   width: '100%',
-  padding: 16,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  textAlign: 'center',
+  padding: '16px 14px',
   borderRadius: 14,
-  border: '1px solid #D7E0EA',
-  background: '#FFFFFF',
+  border: '1px solid #E2E8F0',
+  background: '#FAFBFC',
   color: '#1F2937',
-  fontSize: 16,
+  fontSize: 15,
   fontWeight: 600,
+  lineHeight: 1.4,
   cursor: 'pointer',
-  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+  boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
+  transition: 'box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background 0.2s ease',
 };
+
+const tileHover: CSSProperties = {
+  background: '#FFFFFF',
+  boxShadow: '0 10px 28px rgba(15, 23, 42, 0.09)',
+  borderColor: '#CBD5E1',
+  transform: 'translateY(-2px)',
+};
+
+function AccesoReporte({ href, label }: { href: string; label: string }) {
+  const router = useRouter();
+  const [hover, setHover] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={() => router.push(href)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        ...tileBase,
+        ...(hover ? tileHover : {}),
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 export default function ReportesPage() {
-  const router = useRouter();
-
   return (
     <ReporteLayout
       title="Reportes"
+      encabezadoAmplio
       secondaryNav={{ label: 'Inventario →', href: '/inventario' }}
     >
-      <div style={gridStyle}>
-        <button
-          type="button"
-          onClick={() => router.push('/reportes/entradas')}
-          style={buttonStyle}
-        >
-          Reporte de Entradas
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push('/reportes/salidas')}
-          style={buttonStyle}
-        >
-          Reporte de Salidas
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push('/reportes/inventario-general')}
-          style={buttonStyle}
-        >
-          Inventario General
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push('/reportes/inventario-mx')}
-          style={buttonStyle}
-        >
-          Inventario MX
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push('/reportes/inventario-usa')}
-          style={buttonStyle}
-        >
-          Inventario USA
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push('/reportes/alerta-inventario')}
-          style={buttonStyle}
-        >
-          Alerta de inventario
-        </button>
+      <div style={contenedorGridStyle}>
+        <div style={gridStyle}>
+          {ACCESOS_REPORTES.map((item) => (
+            <AccesoReporte key={item.href} href={item.href} label={item.label} />
+          ))}
+        </div>
       </div>
     </ReporteLayout>
   );

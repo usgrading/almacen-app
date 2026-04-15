@@ -33,6 +33,8 @@ type ReporteLayoutProps = {
   subtitle?: ReactNode;
   /** Inventario general: resumen y filtros fuera de la tarjeta; la tabla va en tarjeta aparte. */
   noCard?: boolean;
+  /** Índice de reportes: un poco más de aire entre logo, título y contenido. */
+  encabezadoAmplio?: boolean;
   /** Botón derecho del header (por defecto vuelve al índice de reportes). */
   secondaryNav?: { label: string; href: string };
   children: ReactNode;
@@ -42,6 +44,7 @@ export function ReporteLayout({
   title,
   subtitle,
   noCard,
+  encabezadoAmplio = false,
   secondaryNav = { label: "Reportes →", href: "/reportes" },
   children,
 }: ReporteLayoutProps) {
@@ -72,7 +75,7 @@ export function ReporteLayout({
             alignItems: "center",
             justifyContent: "space-between",
             gap: 10,
-            marginBottom: 10,
+            marginBottom: encabezadoAmplio ? 14 : 10,
           }}
         >
           <button
@@ -91,7 +94,9 @@ export function ReporteLayout({
           </button>
         </div>
 
-        <div style={{ textAlign: "center", marginBottom: 12 }}>
+        <div
+          style={{ textAlign: "center", marginBottom: encabezadoAmplio ? 18 : 12 }}
+        >
           <img
             src="/logo.png"
             alt="Logo"
@@ -99,7 +104,14 @@ export function ReporteLayout({
           />
         </div>
 
-        <h2 style={titleStyle}>{title}</h2>
+        <h2
+          style={{
+            ...titleStyle,
+            marginBottom: encabezadoAmplio ? 22 : 16,
+          }}
+        >
+          {title}
+        </h2>
 
         {subtitle ? (
           <div
