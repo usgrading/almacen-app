@@ -168,53 +168,54 @@ export default function UsuariosPage() {
   };
 
   const crearUsuario = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  event.preventDefault();
 
-    if (!canSubmit || submitting) return;
+  if (!canSubmit || submitting) return;
 
-    try {
-      setSubmitting(true);
+  try {
+    setSubmitting(true);
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      const accessToken = session?.access_token;
+    const accessToken = session?.access_token;
 
-      if (!accessToken) {
-        throw new Error("Tu sesión no es válida. Cierra sesión y vuelve a entrar.");
-      }
-
-      const response = await fetch("/api/usuarios", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          nombre: nombre.trim(),
-          email: email.trim(),
-          username: username.trim(),
-          password,
-          rol: rolMostrado,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.error || "No se pudo crear el usuario.");
-      }
-
-      resetForm();
-      await cargarUsuarios();
-      alert(`Usuario creado correctamente con rol "${result.rol}".`);
-    } catch (error) {
-      alert(getSupabaseErrorMessage(error) || "Error al crear el usuario");
-    } finally {
-      setSubmitting(false);
+    if (!accessToken) {
+      throw new Error("Tu sesión no es válida. Cierra sesión y vuelve a entrar.");
     }
-  };
+
+    const response = await fetch("/api/usuarios", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        nombre: nombre.trim(),
+        email: email.trim(),
+        username: username.trim(),
+        password,
+        rol: rolMostrado,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result?.error || "No se pudo crear el usuario.");
+    }
+
+    resetForm();
+    await cargarUsuarios();
+    alert(`Usuario creado correctamente con rol "${result.rol}".`);
+  } catch (error) {
+    alert(getSupabaseErrorMessage(error) || "Error al crear el usuario");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   const toggleActivo = async (usuario: Usuario) => {
     try {

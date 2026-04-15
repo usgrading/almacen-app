@@ -11,7 +11,7 @@ type CreateUserBody = {
   rol: Rol;
 };
 
-function badRequest(message: string, status = 400) {
+function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
@@ -26,11 +26,11 @@ export async function POST(req: NextRequest) {
     const rol = (body.rol ?? "viewer") as Rol;
 
     if (!nombre || !email || !username || password.length < 6) {
-      return badRequest("Datos incompletos o inválidos.");
+      return jsonError("Datos incompletos o inválidos.");
     }
 
     if (!["admin", "manager", "viewer"].includes(rol)) {
-      return badRequest("Rol inválido.");
+      return jsonError("Rol inválido.");
     }
 
     const authHeader = req.headers.get("authorization");
@@ -39,14 +39,14 @@ export async function POST(req: NextRequest) {
       : "";
 
     if (!token) {
-      return badRequest("No autorizado.", 401);
+      return jsonError("No autorizado.", 401);
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !serviceRoleKey) {
-      return badRequest("Faltan variables de entorno del servidor.", 500);
+      return jsonError("Faltan variables de entorno del servidor.", 500);
     }
 
     const admin = createClient(supabaseUrl, serviceRoleKey, {
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     } = await admin.auth.getUser(token);
 
     if (requesterError || !requester) {
-      return badRequest("Sesión inválida.", 401);
+      return jsonError("Sesión inválida.", 401);
     }
 
     const { data: requesterProfile, error: requesterProfileError } = await admin
@@ -72,11 +72,10 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (requesterProfileError) {
-      return badRequest(requesterProfileError.message, 500);
+      return jsonError(requesterProfileError.message, 500);
     }
 
-    const requesterOrgId =
-      requesterProfile?.organization_id ?? requester.id;
+    const requesterOrgId = requesterProfile?.organization_id ?? requester.id;
 
     const { count: totalEnOrg, error: countError } = await admin
       .from("profiles")
@@ -84,7 +83,7 @@ export async function POST(req: NextRequest) {
       .eq("organization_id", requesterOrgId);
 
     if (countError) {
-      return badRequest(countError.message, 500);
+      return jsonError(countError.message, 500);
     }
 
     const rolFinal: Rol = (totalEnOrg ?? 0) === 0 ? "admin" : rol;
@@ -101,7 +100,7 @@ export async function POST(req: NextRequest) {
       });
 
     if (createUserError || !createdUser.user) {
-      return badRequest(createUserError?.message ?? "No se pudo crear el usuario.", 500);
+      return jsonError(createUserError?.message ?? "No se pudo crear el usuario.", 500);
     }
 
     const newUserId = createdUser.user.id;
@@ -124,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     if (profileError) {
       await admin.auth.admin.deleteUser(newUserId);
-      return badRequest(profileError.message, 500);
+      return jsonError(profileError.message, 500);
     }
 
     return NextResponse.json({
@@ -135,6 +134,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Error interno del servidor.";
-    return badRequest(message, 500);
+    return jsonError(message, 500);
   }
 }
