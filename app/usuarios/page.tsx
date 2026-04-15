@@ -36,6 +36,7 @@ function mapProfileRow(row: Record<string, unknown>): Usuario | null {
   if (row.id === undefined || row.id === null) return null;
 
   const rawRol = String(row.rol ?? row.role ?? "viewer").toLowerCase();
+
   const rol: Rol = ["admin", "manager", "viewer"].includes(rawRol)
     ? (rawRol as Rol)
     : "viewer";
@@ -117,9 +118,11 @@ export default function UsuariosPage() {
         .from("profiles")
         .select("*")
         .eq("organization_id", orgId)
-        .order("id", { ascending: true });
+        .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       const rows = (data as Record<string, unknown>[]) ?? [];
       const filtradas = rows.filter((row) => mismoUuid(row.organization_id, orgId));
@@ -168,54 +171,53 @@ export default function UsuariosPage() {
   };
 
   const crearUsuario = async (event: FormEvent<HTMLFormElement>) => {
-  event.preventDefault();
+    event.preventDefault();
 
-  if (!canSubmit || submitting) return;
+    if (!canSubmit || submitting) return;
 
-  try {
-    setSubmitting(true);
+    try {
+      setSubmitting(true);
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    const accessToken = session?.access_token;
+      const accessToken = session?.access_token;
 
-    if (!accessToken) {
-      throw new Error("Tu sesión no es válida. Cierra sesión y vuelve a entrar.");
+      if (!accessToken) {
+        throw new Error("Tu sesión no es válida. Cierra sesión y vuelve a entrar.");
+      }
+
+      const response = await fetch("/api/usuarios", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          nombre: nombre.trim(),
+          email: email.trim(),
+          username: username.trim(),
+          password,
+          rol: rolMostrado,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || "No se pudo crear el usuario.");
+      }
+
+      resetForm();
+      await cargarUsuarios();
+      alert(`Usuario creado correctamente con rol "${result.rol}".`);
+    } catch (error) {
+      alert(getSupabaseErrorMessage(error) || "Error al crear el usuario");
+    } finally {
+      setSubmitting(false);
     }
-
-    const response = await fetch("/api/usuarios", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        nombre: nombre.trim(),
-        email: email.trim(),
-        username: username.trim(),
-        password,
-        rol: rolMostrado,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result?.error || "No se pudo crear el usuario.");
-    }
-
-    resetForm();
-    await cargarUsuarios();
-    alert(`Usuario creado correctamente con rol "${result.rol}".`);
-  } catch (error) {
-    alert(getSupabaseErrorMessage(error) || "Error al crear el usuario");
-  } finally {
-    setSubmitting(false);
-  }
-};
-
+  };
 
   const toggleActivo = async (usuario: Usuario) => {
     try {
@@ -226,7 +228,9 @@ export default function UsuariosPage() {
         .update({ activo: nuevoEstado })
         .eq("id", usuario.id);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       setUsuarios((prev) =>
         prev.map((u) => (u.id === usuario.id ? { ...u, activo: nuevoEstado } : u))
@@ -260,7 +264,7 @@ export default function UsuariosPage() {
 
             <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
               Si ves permisos raros, revisa el RLS de <code>profiles</code> y que cada perfil tenga
-              el <code> organization_id </code> correcto.
+              el <code>organization_id</code> correcto.
             </p>
 
             <button type="button" onClick={() => void cargarUsuarios()} style={styles.retryButton}>
