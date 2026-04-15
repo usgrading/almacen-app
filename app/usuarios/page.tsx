@@ -3,7 +3,6 @@
 import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getAuthEmailRedirectUrl } from "@/lib/auth-redirect";
 import { ensureMiOrganizationId, getMiOrganizationId } from "@/lib/organization";
 
 type Rol = "admin" | "manager" | "viewer";
@@ -156,6 +155,7 @@ export default function UsuariosPage() {
 
     revisarPantalla();
     window.addEventListener("resize", revisarPantalla);
+
     return () => window.removeEventListener("resize", revisarPantalla);
   }, []);
 
@@ -175,55 +175,40 @@ export default function UsuariosPage() {
     try {
       setSubmitting(true);
 
-      // Guardar tu org ANTES del signUp
-      await ensureMiOrganizationId(supabase);
-      const orgId = await getMiOrganizationId(supabase);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (!orgId) {
-        throw new Error("No se pudo determinar tu organización. Vuelve a iniciar sesión.");
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        throw new Error("Tu sesión no es válida. Cierra sesión y vuelve a entrar.");
       }
 
-      const rolFinal: Rol = usuarios.length === 0 ? "admin" : rol;
-      const emailRedirectTo = getAuthEmailRedirectUrl("/dashboard");
-
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          ...(emailRedirectTo ? { emailRedirectTo } : {}),
+      const response = await fetch("/api/usuarios", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
-      });
-
-      if (signUpError) throw signUpError;
-
-      const userId = authData.user?.id;
-      if (!userId) {
-        throw new Error("No se pudo obtener el ID del usuario creado.");
-      }
-
-      // IMPORTANTE: upsert para sobrescribir profile automático si Supabase/trigger ya lo creó
-      const { error: profileError } = await supabase.from("profiles").upsert(
-        {
-          id: userId,
-          organization_id: orgId,
+        body: JSON.stringify({
+          nombre: nombre.trim(),
           email: email.trim(),
           username: username.trim(),
-          nombre: nombre.trim(),
-          rol: rolFinal,
-          activo: true,
-          debe_cambiar_password: true,
-        },
-        {
-          onConflict: "id",
-        }
-      );
+          password,
+          rol: rolMostrado,
+        }),
+      });
 
-      if (profileError) throw profileError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || "No se pudo crear el usuario.");
+      }
 
       resetForm();
       await cargarUsuarios();
-
-      alert(`Usuario creado correctamente con rol "${rolFinal}".`);
+      alert(`Usuario creado correctamente con rol "${result.rol}".`);
     } catch (error) {
       alert(getSupabaseErrorMessage(error) || "Error al crear el usuario");
     } finally {
@@ -272,18 +257,10 @@ export default function UsuariosPage() {
             <p style={{ margin: 0, fontWeight: 600 }}>No se pudo cargar la lista</p>
             <p style={{ margin: "8px 0 0 0", fontSize: 14 }}>{cargaError}</p>
 
-            {cargaError.toLowerCase().includes("api key") ? (
-              <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
-                En el hosting define <code>NEXT_PUBLIC_SUPABASE_URL</code> y la clave pública
-                anónima como <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> o{" "}
-                <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>.
-              </p>
-            ) : (
-              <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
-                Si ves permisos raros, revisa el RLS de <code>profiles</code> y que cada perfil
-                tenga el <code>organization_id</code> correcto.
-              </p>
-            )}
+            <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
+              Si ves permisos raros, revisa el RLS de <code>profiles</code> y que cada perfil tenga
+              el <code> organization_id </code> correcto.
+            </p>
 
             <button type="button" onClick={() => void cargarUsuarios()} style={styles.retryButton}>
               Reintentar
@@ -618,4 +595,3 @@ const styles: Record<string, CSSProperties> = {
     wordBreak: "break-word",
   },
 };
-
