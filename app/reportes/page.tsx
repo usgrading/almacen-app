@@ -1,123 +1,85 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageLogo } from '@/components/PageLogo';
+import { ReporteLayout } from '@/components/ReporteLayout';
+
+const gridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+  gap: 12,
+};
+
+const buttonStyle: CSSProperties = {
+  width: '100%',
+  padding: 16,
+  borderRadius: 14,
+  border: '1px solid #D7E0EA',
+  background: '#FFFFFF',
+  color: '#1F2937',
+  fontSize: 16,
+  fontWeight: 600,
+  cursor: 'pointer',
+  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+};
 
 export default function ReportesPage() {
   const router = useRouter();
 
   return (
-    <main style={styles.page}>
-      <div style={{ maxWidth: 700, margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
-            marginBottom: 10,
-          }}
+    <ReporteLayout
+      title="Reportes"
+      secondaryNav={{ label: 'Inventario →', href: '/inventario' }}
+    >
+      <div style={gridStyle}>
+        <button
+          type="button"
+          onClick={() => router.push('/reportes/entradas')}
+          style={buttonStyle}
         >
-          <button
-            type="button"
-            onClick={() => router.push('/dashboard')}
-            style={styles.backButton}
-          >
-            ← Inicio
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/inventario')}
-            style={styles.backButton}
-          >
-            Inventario →
-          </button>
-        </div>
+          Reporte de Entradas
+        </button>
 
-        <PageLogo />
+        <button
+          type="button"
+          onClick={() => router.push('/reportes/salidas')}
+          style={buttonStyle}
+        >
+          Reporte de Salidas
+        </button>
 
-        <h1 style={styles.title}>Reportes</h1>
+        <button
+          type="button"
+          onClick={() => router.push('/reportes/inventario-general')}
+          style={buttonStyle}
+        >
+          Inventario General
+        </button>
 
-        <div style={styles.grid}>
-          <button onClick={() => router.push('/reportes/entradas')} style={styles.button}>
-            Reporte de Entradas
-          </button>
+        <button
+          type="button"
+          onClick={() => router.push('/reportes/inventario-mx')}
+          style={buttonStyle}
+        >
+          Inventario MX
+        </button>
 
-          <button onClick={() => router.push('/reportes/salidas')} style={styles.button}>
-            Reporte de Salidas
-          </button>
+        <button
+          type="button"
+          onClick={() => router.push('/reportes/inventario-usa')}
+          style={buttonStyle}
+        >
+          Inventario USA
+        </button>
 
-          <button
-            onClick={() => router.push('/reportes/inventario-general')}
-            style={styles.button}
-          >
-            Inventario General
-          </button>
-
-          <button
-            onClick={() => router.push('/reportes/inventario-mx')}
-            style={styles.button}
-          >
-            Inventario MX
-          </button>
-
-          <button
-            onClick={() => router.push('/reportes/inventario-usa')}
-            style={styles.button}
-          >
-            Inventario USA
-          </button>
-
-          <button
-            onClick={() => router.push('/reportes/alerta-inventario')}
-            style={styles.button}
-          >
-            Alerta de inventario
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => router.push('/reportes/alerta-inventario')}
+          style={buttonStyle}
+        >
+          Alerta de inventario
+        </button>
       </div>
-    </main>
+    </ReporteLayout>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    background: '#EEF3F8',
-    padding: 20,
-    fontFamily: 'Arial, sans-serif',
-  },
-  backButton: {
-    marginBottom: 10,
-    background: 'none',
-    border: 'none',
-    color: '#1E40AF',
-    fontWeight: 600,
-    cursor: 'pointer',
-    padding: 0,
-  },
-  title: {
-    marginTop: 0,
-    marginBottom: 14,
-    color: '#1F2937',
-    fontSize: 28,
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: 12,
-  },
-  button: {
-    width: '100%',
-    padding: 16,
-    borderRadius: 14,
-    border: '1px solid #D7E0EA',
-    background: '#FFFFFF',
-    color: '#1F2937',
-    fontSize: 16,
-    fontWeight: 600,
-    cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
-  },
-};

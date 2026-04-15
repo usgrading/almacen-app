@@ -1,13 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-);
+import { supabase } from '@/lib/supabase';
+import { ReporteLayout } from '@/components/ReporteLayout';
 
 type FiltroOrigen = 'TODOS' | 'MX' | 'USA';
 
@@ -23,8 +18,6 @@ type InventarioItem = {
 };
 
 export default function InventarioPage() {
-  const router = useRouter();
-
   const [inventario, setInventario] = useState<InventarioItem[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [esCel, setEsCel] = useState(false);
@@ -136,79 +129,7 @@ export default function InventarioPage() {
   };
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#EEF3F8',
-        padding: 20,
-        fontFamily: 'Arial, sans-serif',
-      }}
-    >
-      <div style={{ maxWidth: esCel ? 520 : 1100, margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
-            marginBottom: 10,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => router.push('/dashboard')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#1E40AF',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          >
-            ← Inicio
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/reportes')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#1E40AF',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          >
-            Reportes →
-          </button>
-        </div>
-
-        <div style={{ textAlign: 'center', marginBottom: 12 }}>
-          <img
-            src="/logo.png"
-            alt="Logo"
-            style={{
-              width: 100,
-              height: 'auto',
-              objectFit: 'contain',
-            }}
-          />
-        </div>
-
-        <h2
-          style={{
-            marginTop: 0,
-            marginBottom: 16,
-            color: '#1F2937',
-            fontSize: 22,
-            textAlign: 'center',
-          }}
-        >
-          Inventario
-        </h2>
-
+    <ReporteLayout title="Inventario general" noCard>
         <div
           style={{
             display: 'grid',
@@ -452,8 +373,7 @@ export default function InventarioPage() {
             </div>
           )}
         </div>
-      </div>
-    </main>
+    </ReporteLayout>
   );
 }
 
