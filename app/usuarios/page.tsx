@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PageLogo } from "@/components/PageLogo";
 import { supabase } from "@/lib/supabase";
 import { ensureMiOrganizationId, getMiOrganizationId } from "@/lib/organization";
+import { getUserRole, isAdmin } from "@/lib/roles";
 
 type Rol = "admin" | "manager" | "viewer";
 
@@ -73,6 +74,8 @@ export default function UsuariosPage() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [esCel, setEsCel] = useState(false);
+  const [accesoAdmin, setAccesoAdmin] = useState(false);
+  const [comprobandoAcceso, setComprobandoAcceso] = useState(true);
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -149,8 +152,33 @@ export default function UsuariosPage() {
   };
 
   useEffect(() => {
+    const verificarAdmin = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.user?.id) {
+          router.push("/login");
+          return;
+        }
+        await ensureMiOrganizationId(supabase);
+        const rol = await getUserRole(supabase);
+        if (!isAdmin(rol)) {
+          router.replace("/dashboard");
+          return;
+        }
+        setAccesoAdmin(true);
+      } finally {
+        setComprobandoAcceso(false);
+      }
+    };
+    void verificarAdmin();
+  }, [router]);
+
+  useEffect(() => {
+    if (!accesoAdmin) return;
     void cargarUsuarios();
-  }, []);
+  }, [accesoAdmin]);
 
   useEffect(() => {
     const revisarPantalla = () => {
@@ -221,6 +249,7 @@ export default function UsuariosPage() {
   };
 
   const toggleActivo = async (usuario: Usuario) => {
+    if (!accesoAdmin) return;
     try {
       const nuevoEstado = !usuario.activo;
 
@@ -244,6 +273,18 @@ export default function UsuariosPage() {
       alert(message);
     }
   };
+
+  if (comprobandoAcceso) {
+    return (
+      <main style={styles.container}>
+        <p style={{ textAlign: "center", color: "#64748B" }}>Cargando...</p>
+      </main>
+    );
+  }
+
+  if (!accesoAdmin) {
+    return null;
+  }
 
   return (
     <main style={styles.container}>

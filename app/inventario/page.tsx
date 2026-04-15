@@ -2,12 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-);
+import { supabase } from '@/lib/supabase';
+import { canMutateStock, getUserRole, type AppRole } from '@/lib/roles';
 
 type FiltroOrigen = 'TODOS' | 'MX' | 'USA';
 
@@ -29,9 +25,11 @@ export default function InventarioPage() {
   const [busqueda, setBusqueda] = useState('');
   const [esCel, setEsCel] = useState(false);
   const [filtroOrigen, setFiltroOrigen] = useState<FiltroOrigen>('TODOS');
+  const [appRole, setAppRole] = useState<AppRole | null>(null);
+  const [rolListo, setRolListo] = useState(false);
 
-  // TODO: luego esto debe venir del perfil del usuario
-  const esAdmin = true;
+  /** Admin y manager ven montos; viewer solo listado sin valores financieros. */
+  const puedeVerMontos = rolListo && canMutateStock(appRole);
 
   useEffect(() => {
     const cargarInventario = async () => {
@@ -46,6 +44,13 @@ export default function InventarioPage() {
     };
 
     void cargarInventario();
+  }, []);
+
+  useEffect(() => {
+    void getUserRole(supabase).then((r) => {
+      setAppRole(r);
+      setRolListo(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -227,7 +232,7 @@ export default function InventarioPage() {
             <div style={resumenValueStyle}>{totalPiezas}</div>
           </div>
 
-          {esAdmin && (
+          {puedeVerMontos && (
             <>
               <div style={resumenCardStyle}>
                 <div style={resumenLabelWithFlagStyle}>
@@ -377,7 +382,7 @@ export default function InventarioPage() {
                     <span style={mobileValueStyle}>{item.ubicacion || '—'}</span>
                   </div>
 
-                  {esAdmin && (
+                  {puedeVerMontos && (
                     <div style={mobileRowStyle}>
                       <span style={mobileLabelStyle}>Valor total:</span>
                       <span style={mobileValueStyle}>
@@ -398,7 +403,7 @@ export default function InventarioPage() {
                 style={{
                   width: '100%',
                   borderCollapse: 'collapse',
-                  minWidth: esAdmin ? 920 : 760,
+                  minWidth: puedeVerMontos ? 920 : 760,
                 }}
               >
                 <thead>
@@ -407,7 +412,7 @@ export default function InventarioPage() {
                     <th style={headerStyle}>Cantidad actual</th>
                     <th style={headerStyle}>Unidad</th>
                     <th style={headerStyle}>Ubicación</th>
-                    {esAdmin && <th style={headerStyle}>Valor total</th>}
+                    {puedeVerMontos && <th style={headerStyle}>Valor total</th>}
                     <th style={headerStyleCenter}>Origen</th>
                   </tr>
                 </thead>
@@ -424,7 +429,7 @@ export default function InventarioPage() {
                       <td style={cellStyle}>{toNumber(item.cantidad_actual)}</td>
                       <td style={cellStyle}>{item.unidad || '—'}</td>
                       <td style={cellStyle}>{item.ubicacion || '—'}</td>
-                      {esAdmin && (
+                      {puedeVerMontos && (
                         <td style={cellStyle}>
                           {renderValor(
                             item.valor_inventario,

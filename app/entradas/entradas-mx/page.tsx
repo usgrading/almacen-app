@@ -1,13 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-);
+import { supabase } from '@/lib/supabase';
+import { canMutateStock, getUserRole, type AppRole } from '@/lib/roles';
 
 type EntradaResumen = {
   producto?: string | null;
@@ -30,6 +26,8 @@ export default function EntradasPage() {
 
   const [cargando, setCargando] = useState(false);
   const [ultimaEntrada, setUltimaEntrada] = useState<EntradaResumen | null>(null);
+  const [appRole, setAppRole] = useState<AppRole | null>(null);
+  const [rolListo, setRolListo] = useState(false);
 
   // Factura
   const [proveedor, setProveedor] = useState('');
@@ -109,6 +107,13 @@ export default function EntradasPage() {
     cargarUltimaEntrada();
   }, []);
 
+  useEffect(() => {
+    void getUserRole(supabase).then((r) => {
+      setAppRole(r);
+      setRolListo(true);
+    });
+  }, []);
+
   const convertirNumero = (valor: string) => {
     if (!valor.trim()) return 0;
     const numero = Number(valor);
@@ -119,7 +124,14 @@ export default function EntradasPage() {
     return Math.round(valor * 100) / 100;
   };
 
+  const puedeRegistrar = rolListo && canMutateStock(appRole);
+
   const handleSubmit = async () => {
+    if (!puedeRegistrar) {
+      alert('No tienes permiso para registrar entradas (solo lectura).');
+      return;
+    }
+
     if (!producto.trim()) {
       alert('Escribe el nombre de pieza');
       return;
@@ -699,23 +711,25 @@ export default function EntradasPage() {
           </div>
 
           <button
+            type="button"
             onClick={handleSubmit}
-            disabled={cargando}
+            disabled={cargando || !puedeRegistrar}
             style={{
               width: '100%',
               padding: 16,
               marginTop: 8,
               borderRadius: 12,
-              background: '#1E40AF',
+              background: puedeRegistrar ? '#1E40AF' : '#94A3B8',
               color: '#FFFFFF',
               fontWeight: 600,
               fontSize: 16,
               border: 'none',
-              cursor: 'pointer',
+              cursor: puedeRegistrar && !cargando ? 'pointer' : 'not-allowed',
               boxShadow: '0 8px 18px rgba(30, 64, 175, 0.20)',
+              opacity: puedeRegistrar ? 1 : 0.85,
             }}
           >
-            {cargando ? 'Guardando...' : 'Guardar Entrada'}
+            {cargando ? 'Guardando...' : !puedeRegistrar ? 'Solo lectura' : 'Guardar Entrada'}
           </button>
 
           <div style={{ marginTop: 20 }}>

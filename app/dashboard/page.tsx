@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { ensureMiOrganizationId } from '@/lib/organization';
+import { isAdmin, normalizeRole, type AppRole } from '@/lib/roles';
 
 type Profile = {
   nombre: string | null;
   rol: string | null;
+  role?: string | null;
 };
 
 function getRoleLabel(role: string | null) {
@@ -18,10 +20,16 @@ function getRoleLabel(role: string | null) {
   return '';
 }
 
+function labelFromProfile(p: Profile | null): string {
+  if (!p) return '';
+  return getRoleLabel((p.role ?? p.rol) as string | null);
+}
+
 export default function DashboardPage() {
   const router = useRouter();
 
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [appRole, setAppRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [esCel, setEsCel] = useState(false);
 
@@ -41,11 +49,13 @@ export default function DashboardPage() {
 
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('nombre, rol')
+        .select('nombre, rol, role')
         .eq('id', session.user.id)
         .single();
 
-      setProfile((profileData as Profile | null) ?? null);
+      const p = (profileData as Profile | null) ?? null;
+      setProfile(p);
+      setAppRole(normalizeRole(p?.role ?? p?.rol ?? null));
     } finally {
       setLoading(false);
     }
@@ -153,7 +163,7 @@ export default function DashboardPage() {
                 fontWeight: 500,
               }}
             >
-              {getRoleLabel(profile?.rol ?? null)}
+              {labelFromProfile(profile)}
             </p>
           </div>
 
@@ -198,12 +208,14 @@ export default function DashboardPage() {
               Inventario y reportes
             </button>
 
-            <button
-              onClick={() => router.push('/usuarios')}
-              style={buttonStyle}
-            >
-              Usuarios
-            </button>
+            {isAdmin(appRole) && (
+              <button
+                onClick={() => router.push('/usuarios')}
+                style={buttonStyle}
+              >
+                Usuarios
+              </button>
+            )}
           </div>
 
           <button

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { uniqueProfileUsername } from "@/lib/profile-username";
+import { canManageUsers, normalizeRole } from "@/lib/roles";
 
 type Rol = "admin" | "manager" | "viewer";
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     const { data: inviterProfile, error: inviterProfileError } = await admin
       .from("profiles")
-      .select("organization_id")
+      .select("organization_id, role, rol")
       .eq("id", inviter.id)
       .maybeSingle();
 
@@ -48,9 +49,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const organizationId =
-      (inviterProfile as { organization_id?: string | null } | null)
-        ?.organization_id ?? inviter.id;
+    const inviterRow = inviterProfile as {
+      organization_id?: string | null;
+      role?: string | null;
+      rol?: string | null;
+    } | null;
+
+    const inviterRole = normalizeRole(inviterRow?.role ?? inviterRow?.rol ?? null);
+    if (!canManageUsers(inviterRole)) {
+      return NextResponse.json(
+        { error: "Solo un administrador puede crear usuarios." },
+        { status: 403 }
+      );
+    }
+
+    const organizationId = inviterRow?.organization_id ?? inviter.id;
 
     let rolFinal: Rol = "viewer";
     if (rol === "admin" || rol === "manager" || rol === "viewer") {
@@ -89,6 +102,7 @@ export async function POST(req: NextRequest) {
         email,
         username: usernameFinal,
         rol: rolFinal,
+        role: rolFinal,
         activo: true,
         debe_cambiar_password: true,
       },

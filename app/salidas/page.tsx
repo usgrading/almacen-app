@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { ensureMiOrganizationId, getMiOrganizationId } from '@/lib/organization';
+import { canMutateStock, getUserRole, type AppRole } from '@/lib/roles';
 
 type Salida = {
   id: string | number;
@@ -42,6 +43,8 @@ export default function SalidasPage() {
   const [salidas, setSalidas] = useState<Salida[]>([]);
   const [productosInventario, setProductosInventario] = useState<ProductoInventario[]>([]);
   const [resultadosBusqueda, setResultadosBusqueda] = useState<ProductoInventario[]>([]);
+  const [appRole, setAppRole] = useState<AppRole | null>(null);
+  const [rolListo, setRolListo] = useState(false);
 
   useEffect(() => {
     const cargarSalidas = async () => {
@@ -85,7 +88,21 @@ export default function SalidasPage() {
     void cargarProductos();
   }, []);
 
+  useEffect(() => {
+    void getUserRole(supabase).then((r) => {
+      setAppRole(r);
+      setRolListo(true);
+    });
+  }, []);
+
+  const puedeRegistrar = rolListo && canMutateStock(appRole);
+
   const handleGuardar = async () => {
+    if (!puedeRegistrar) {
+      alert('No tienes permiso para registrar salidas (solo lectura).');
+      return;
+    }
+
     if (!producto || !cantidad || !unidad || !destino || !vehiculo || !autorizo) {
       alert('Llena todos los campos');
       return;
@@ -445,8 +462,18 @@ export default function SalidasPage() {
             style={inputStyle}
           />
 
-          <button onClick={handleGuardar} style={buttonStyle}>
-            {loading ? 'Guardando...' : 'Guardar salida'}
+          <button
+            type="button"
+            onClick={handleGuardar}
+            disabled={loading || !puedeRegistrar}
+            style={{
+              ...buttonStyle,
+              background: puedeRegistrar ? '#1E40AF' : '#94A3B8',
+              cursor: puedeRegistrar && !loading ? 'pointer' : 'not-allowed',
+              opacity: puedeRegistrar ? 1 : 0.85,
+            }}
+          >
+            {loading ? 'Guardando...' : !puedeRegistrar ? 'Solo lectura' : 'Guardar salida'}
           </button>
 
           <div style={{ marginTop: 20 }}>
