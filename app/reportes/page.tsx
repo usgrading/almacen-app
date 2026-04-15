@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ReporteLayout } from '@/components/ReporteLayout';
+import { supabase } from '@/lib/supabase';
+import { contarAlertasInventario } from '@/lib/alertas-inventario';
 
 const banderaEnTarjeta: CSSProperties = {
   marginLeft: 8,
@@ -33,7 +35,6 @@ const ACCESOS_REPORTES: readonly { href: string; label: ReactNode }[] = [
       </>
     ),
   },
-  { href: '/reportes/alerta-inventario', label: 'Alerta de inventario' },
 ];
 
 const contenedorGridStyle: CSSProperties = {
@@ -74,6 +75,32 @@ const tileHover: CSSProperties = {
   transform: 'translateY(-2px)',
 };
 
+const alertaTileRojo: CSSProperties = {
+  background: '#FEF2F2',
+  borderColor: '#FECACA',
+  color: '#991B1B',
+};
+
+const alertaTileRojoHover: CSSProperties = {
+  background: '#FEE2E2',
+  borderColor: '#FCA5A5',
+  boxShadow: '0 10px 28px rgba(185, 28, 28, 0.12)',
+  transform: 'translateY(-2px)',
+};
+
+const alertaTileVerde: CSSProperties = {
+  background: '#F0FDF4',
+  borderColor: '#BBF7D0',
+  color: '#166534',
+};
+
+const alertaTileVerdeHover: CSSProperties = {
+  background: '#DCFCE7',
+  borderColor: '#86EFAC',
+  boxShadow: '0 10px 28px rgba(22, 101, 52, 0.1)',
+  transform: 'translateY(-2px)',
+};
+
 function AccesoReporte({ href, label }: { href: string; label: ReactNode }) {
   const router = useRouter();
   const [hover, setHover] = useState(false);
@@ -94,6 +121,141 @@ function AccesoReporte({ href, label }: { href: string; label: ReactNode }) {
   );
 }
 
+function AccesoAlertaInventario() {
+  const router = useRouter();
+  const [hover, setHover] = useState(false);
+  const [alertCount, setAlertCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from('inventario')
+        .select('cantidad_actual, minimo');
+
+      if (cancelled) return;
+      if (error) {
+        setAlertCount(0);
+        return;
+      }
+      setAlertCount(contarAlertasInventario(data ?? []));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const cargando = alertCount === null;
+  const hayAlertas = !cargando && alertCount > 0;
+
+  const estiloBase: CSSProperties = {
+    ...tileBase,
+    position: 'relative',
+    overflow: 'visible',
+    flexDirection: 'column',
+    gap: 6,
+    ...(cargando ? {} : hayAlertas ? alertaTileRojo : alertaTileVerde),
+  };
+
+  let estiloHover: CSSProperties = {};
+  if (hover) {
+    if (cargando) estiloHover = tileHover;
+    else if (hayAlertas) estiloHover = alertaTileRojoHover;
+    else estiloHover = alertaTileVerdeHover;
+  }
+
+  return (
+    <>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes reportes-alerta-badge-pulse {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.06); }
+            }
+          `,
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => router.push('/reportes/alerta-inventario')}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{
+          ...estiloBase,
+          ...estiloHover,
+        }}
+        aria-label={
+          cargando
+            ? 'Alerta de inventario, cargando'
+            : hayAlertas
+              ? `Alerta de inventario: ${alertCount} ${alertCount === 1 ? 'alerta' : 'alertas'}`
+              : 'Alerta de inventario, sin alertas'
+        }
+      >
+        {hayAlertas ? (
+          <span
+            style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              minWidth: 22,
+              height: 22,
+              padding: '0 7px',
+              borderRadius: 999,
+              background: '#DC2626',
+              color: '#FFFFFF',
+              fontSize: 12,
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.18)',
+              animation: 'reportes-alerta-badge-pulse 2.2s ease-in-out infinite',
+              zIndex: 1,
+            }}
+            aria-hidden
+          >
+            {alertCount}
+          </span>
+        ) : null}
+
+        <span
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 4,
+            maxWidth: '100%',
+            paddingRight: hayAlertas ? 24 : 0,
+          }}
+        >
+          <span>Alerta de inventario</span>
+          {!cargando && !hayAlertas ? (
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                opacity: 0.95,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              Sin alertas
+              <span style={{ color: '#22C55E', fontSize: 14 }} aria-hidden>
+                ✓
+              </span>
+            </span>
+          ) : null}
+        </span>
+      </button>
+    </>
+  );
+}
+
 export default function ReportesPage() {
   return (
     <ReporteLayout
@@ -106,6 +268,7 @@ export default function ReportesPage() {
           {ACCESOS_REPORTES.map((item) => (
             <AccesoReporte key={item.href} href={item.href} label={item.label} />
           ))}
+          <AccesoAlertaInventario />
         </div>
       </div>
     </ReporteLayout>

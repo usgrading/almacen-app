@@ -10,6 +10,7 @@ import {
   reporteTh,
   reporteTheadRow,
 } from '@/components/ReporteLayout';
+import { filtrarAlertasInventario } from '@/lib/alertas-inventario';
 
 type InventarioItem = {
   id: string | number;
@@ -57,16 +58,10 @@ export default function ReporteAlertaInventarioPage() {
     void cargar();
   }, []);
 
-  const alertas = useMemo(() => {
-    return inventario.filter((item) => {
-      const min = item.minimo;
-      const qty = Number(item.cantidad_actual ?? 0);
-      if (min === null || min === undefined) return false;
-      const minNum = Number(min);
-      if (!Number.isFinite(minNum) || minNum <= 0) return false;
-      return qty < minNum;
-    });
-  }, [inventario]);
+  const alertas = useMemo(
+    () => filtrarAlertasInventario(inventario),
+    [inventario]
+  );
 
   return (
     <ReporteLayout title="Alerta de inventario" subtitle={subtituloAlerta}>
