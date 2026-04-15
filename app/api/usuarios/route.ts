@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { uniqueProfileUsername } from "@/lib/profile-username";
+
+type Rol = "admin" | "manager" | "viewer";
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,16 +11,52 @@ export async function POST(req: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-    const admin = createClient(supabaseUrl, serviceRole);
+    const authHeader = req.headers.get("authorization");
+    const bearer = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
+    if (!bearer) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    }
 
-    // 🔥 VALIDAR ROL CORRECTO
-    let rolFinal = "viewer";
+    const admin = createClient(supabaseUrl, serviceRole, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
+    const {
+      data: { user: inviter },
+      error: inviterError,
+    } = await admin.auth.getUser(bearer);
+
+    if (inviterError || !inviter?.id) {
+      return NextResponse.json(
+        { error: "Sesión inválida. Vuelve a iniciar sesión." },
+        { status: 401 }
+      );
+    }
+
+    const { data: inviterProfile, error: inviterProfileError } = await admin
+      .from("profiles")
+      .select("organization_id")
+      .eq("id", inviter.id)
+      .maybeSingle();
+
+    if (inviterProfileError) {
+      return NextResponse.json(
+        { error: inviterProfileError.message },
+        { status: 500 }
+      );
+    }
+
+    const organizationId =
+      (inviterProfile as { organization_id?: string | null } | null)
+        ?.organization_id ?? inviter.id;
+
+    let rolFinal: Rol = "viewer";
     if (rol === "admin" || rol === "manager" || rol === "viewer") {
       rolFinal = rol;
     }
 
-    // 1. Crear usuario en auth
     const { data: userData, error: userError } =
       await admin.auth.admin.createUser({
         email,
@@ -26,20 +65,30 @@ export async function POST(req: NextRequest) {
       });
 
     if (userError || !userData.user) {
-      throw userError;
+      const raw = userError?.message ?? "No se pudo crear el usuario.";
+      const hint =
+        raw.toLowerCase().includes("database error saving new user")
+          ? " Revisa trigger en auth.users → profiles y unicidad de username/email."
+          : "";
+      return NextResponse.json({ error: raw + hint }, { status: 500 });
     }
 
     const userId = userData.user.id;
+    const emailStr = String(email).trim().toLowerCase();
+    const handleBase =
+      typeof username === "string" && username.trim().length > 0
+        ? username.trim()
+        : emailStr;
+    const usernameFinal = uniqueProfileUsername(handleBase, userId);
 
-    // 2. Crear profile REAL
     const { error: profileError } = await admin.from("profiles").upsert(
       {
         id: userId,
-        organization_id: userId,
+        organization_id: organizationId,
         nombre,
         email,
-        username,
-        rol: rolFinal, // 🔥 AQUÍ ESTÁ LA CLAVE
+        username: usernameFinal,
+        rol: rolFinal,
         activo: true,
         debe_cambiar_password: true,
       },
@@ -49,14 +98,17 @@ export async function POST(req: NextRequest) {
     );
 
     if (profileError) {
-      throw profileError;
+      await admin.auth.admin.deleteUser(userId);
+      return NextResponse.json(
+        { error: profileError.message },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ ok: true, rol: rolFinal });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message || "error" },
-      { status: 500 }
-    );
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Error interno del servidor.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

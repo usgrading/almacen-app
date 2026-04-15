@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { uniqueProfileUsername } from "@/lib/profile-username";
 
 type Body = {
   nombre?: string;
@@ -63,13 +64,16 @@ export async function POST(req: NextRequest) {
       });
 
     if (userError || !userData.user) {
-      return NextResponse.json(
-        { error: userError?.message ?? "No se pudo crear el usuario." },
-        { status: 500 }
-      );
+      const raw = userError?.message ?? "No se pudo crear el usuario.";
+      const hint =
+        raw.toLowerCase().includes("database error saving new user")
+          ? " Suele deberse a un trigger en auth.users que inserta en profiles (revisa SQL en Supabase) o a username/email duplicado."
+          : "";
+      return NextResponse.json({ error: raw + hint }, { status: 500 });
     }
 
     const userId = userData.user.id;
+    const username = uniqueProfileUsername(email, userId);
 
     // Crear profile real
     const { error: profileError } = await admin.from("profiles").upsert(
@@ -78,7 +82,7 @@ export async function POST(req: NextRequest) {
         organization_id: userId,
         nombre,
         email,
-        username: email.split("@")[0],
+        username,
         rol: rolFinal,
         activo: true,
         debe_cambiar_password: false,
