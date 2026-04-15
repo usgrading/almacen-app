@@ -68,6 +68,13 @@ export default function ReportesPage() {
           >
             Inventario USA
           </button>
+
+          <button
+            onClick={() => router.push('/reportes/alerta-inventario')}
+            style={styles.button}
+          >
+            Alerta de inventario
+          </button>
         </div>
       </div>
     </main>
