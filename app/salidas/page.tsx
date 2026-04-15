@@ -1,13 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-);
+import { supabase } from '@/lib/supabase';
+import { ensureMiOrganizationId, getMiOrganizationId } from '@/lib/organization';
 
 type Salida = {
   id: string | number;
@@ -19,6 +15,7 @@ type Salida = {
   autorizado_por: string;
   foto_pieza?: string | null;
   origen: 'MX' | 'USA' | string;
+  organization_id?: string | null;
 };
 
 type ProductoInventario = {
@@ -48,10 +45,24 @@ export default function SalidasPage() {
 
   useEffect(() => {
     const cargarSalidas = async () => {
-      const { data } = await supabase
+      await ensureMiOrganizationId(supabase);
+      const orgId = await getMiOrganizationId(supabase);
+      if (!orgId) {
+        setSalidas([]);
+        return;
+      }
+
+      const { data, error } = await supabase
         .from('salidas')
         .select('*')
+        .eq('organization_id', orgId)
         .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('salidas:', error);
+        setSalidas([]);
+        return;
+      }
 
       setSalidas((data as Salida[]) || []);
     };
@@ -86,6 +97,14 @@ export default function SalidasPage() {
     }
 
     setLoading(true);
+
+    await ensureMiOrganizationId(supabase);
+    const orgId = await getMiOrganizationId(supabase);
+    if (!orgId) {
+      alert('No se pudo determinar tu organización. Vuelve a iniciar sesión.');
+      setLoading(false);
+      return;
+    }
 
     const productoNormalizado = producto.trim().toLowerCase();
 
@@ -127,6 +146,7 @@ export default function SalidasPage() {
           autorizado_por: autorizo,
           foto_pieza: fotoPieza,
           origen,
+          organization_id: orgId,
         },
       ])
       .select()

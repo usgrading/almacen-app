@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageLogo } from '@/components/PageLogo';
 import { supabase } from '@/lib/supabase';
+import { ensureMiOrganizationId, getMiOrganizationId } from '@/lib/organization';
 
 type Salida = {
   id: string | number;
@@ -24,9 +25,17 @@ export default function ReporteSalidasPage() {
     const cargar = async () => {
       try {
         setLoading(true);
+        await ensureMiOrganizationId(supabase);
+        const orgId = await getMiOrganizationId(supabase);
+        if (!orgId) {
+          setSalidas([]);
+          return;
+        }
+
         const { data, error } = await supabase
           .from('salidas')
           .select('id, producto, cantidad, unidad, origen, destino, created_at')
+          .eq('organization_id', orgId)
           .order('created_at', { ascending: false })
           .limit(100);
 
