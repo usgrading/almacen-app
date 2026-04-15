@@ -35,20 +35,24 @@ function mismoUuid(a: unknown, b: unknown): boolean {
 
 function mapProfileRow(row: Record<string, unknown>): Usuario | null {
   if (row.id === undefined || row.id === null) return null;
+
   const rawRol = String(row.rol ?? row.role ?? "viewer").toLowerCase();
   const rol: Rol = ["admin", "manager", "viewer"].includes(rawRol)
     ? (rawRol as Rol)
     : "viewer";
+
   const activo =
     row.activo === undefined || row.activo === null
       ? true
       : row.activo === true || row.activo === 1 || row.activo === "true";
+
   const debe =
     row.debe_cambiar_password === undefined || row.debe_cambiar_password === null
       ? false
       : row.debe_cambiar_password === true ||
         row.debe_cambiar_password === 1 ||
         row.debe_cambiar_password === "true";
+
   return {
     id: String(row.id),
     nombre: String(row.nombre ?? row.name ?? ""),
@@ -73,7 +77,10 @@ export default function UsuariosPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [rol, setRol] = useState<Rol>("admin");
+  const [rol, setRol] = useState<Rol>("viewer");
+
+  const esPrimerUsuario = usuarios.length === 0;
+  const rolMostrado = esPrimerUsuario ? "admin" : rol;
 
   const canSubmit = useMemo(() => {
     return (
@@ -92,12 +99,14 @@ export default function UsuariosPage() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+
       if (!session?.user?.id) {
         router.push("/login");
         return;
       }
 
       await ensureMiOrganizationId(supabase);
+
       const orgId = await getMiOrganizationId(supabase);
       if (!orgId) {
         setCargaError("No hay sesión. Inicia sesión para ver tu equipo.");
@@ -120,6 +129,7 @@ export default function UsuariosPage() {
       const mapped = filtradas
         .map((row) => mapProfileRow(row))
         .filter((u): u is Usuario => u !== null);
+
       setUsuarios(mapped);
     } catch (error) {
       const detail = getSupabaseErrorMessage(error);
@@ -128,6 +138,7 @@ export default function UsuariosPage() {
         detail.toLowerCase().includes("schema cache")
           ? " Ejecuta en Supabase la migración que añade la columna organization_id a profiles."
           : "";
+
       setCargaError(detail + hint);
       setUsuarios([]);
       console.error("profiles select:", error);
@@ -137,7 +148,7 @@ export default function UsuariosPage() {
   };
 
   useEffect(() => {
-    cargarUsuarios();
+    void cargarUsuarios();
   }, []);
 
   useEffect(() => {
@@ -169,6 +180,13 @@ export default function UsuariosPage() {
     try {
       setSubmitting(true);
 
+      await ensureMiOrganizationId(supabase);
+      const orgId = await getMiOrganizationId(supabase);
+
+      if (!orgId) {
+        throw new Error("No se pudo determinar tu organización. Vuelve a iniciar sesión.");
+      }
+
       const emailRedirectTo = getAuthEmailRedirectUrl("/dashboard");
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
@@ -188,25 +206,18 @@ export default function UsuariosPage() {
         throw new Error("No se pudo obtener el ID del usuario creado.");
       }
 
-      await ensureMiOrganizationId(supabase);
-      const orgId = await getMiOrganizationId(supabase);
-      if (!orgId) {
-        throw new Error("No se pudo determinar tu organización. Vuelve a iniciar sesión.");
-      }
+      const rolFinal: Rol = esPrimerUsuario ? "admin" : rol;
 
-      const rolFinal: Rol = usuarios.length === 0 ? "admin" : rol;
-
-const { error: profileError } = await supabase.from("profiles").insert({
-  id: userId,
-  organization_id: orgId,
-  email: email.trim(),
-  username: username.trim(),
-  nombre: nombre.trim(),
-  rol: rolFinal,
-  activo: true,
-  debe_cambiar_password: true,
-});
-
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: userId,
+        organization_id: orgId,
+        email: email.trim(),
+        username: username.trim(),
+        nombre: nombre.trim(),
+        rol: rolFinal,
+        activo: true,
+        debe_cambiar_password: true,
+      });
 
       if (profileError) {
         throw profileError;
@@ -214,7 +225,7 @@ const { error: profileError } = await supabase.from("profiles").insert({
 
       resetForm();
       await cargarUsuarios();
-      alert("Usuario creado correctamente.");
+      alert(`Usuario creado correctamente con rol "${rolFinal}".`);
     } catch (error) {
       alert(getSupabaseErrorMessage(error) || "Error al crear el usuario");
     } finally {
@@ -264,20 +275,20 @@ const { error: profileError } = await supabase.from("profiles").insert({
           <div style={styles.errorBanner}>
             <p style={{ margin: 0, fontWeight: 600 }}>No se pudo cargar la lista</p>
             <p style={{ margin: "8px 0 0 0", fontSize: 14 }}>{cargaError}</p>
+
             {cargaError.toLowerCase().includes("api key") ? (
               <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
-                En el hosting (ej. Vercel) define{" "}
-                <code>NEXT_PUBLIC_SUPABASE_URL</code> y la clave pública anónima como{" "}
-                <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> o{" "}
-                <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> (Supabase → Settings → API).
+                En el hosting define <code>NEXT_PUBLIC_SUPABASE_URL</code> y la clave pública anónima
+                como <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> o{" "}
+                <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>.
               </p>
             ) : (
               <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
-                Si ves usuarios de otras cuentas o permisos raros, ejecuta en Supabase el SQL de{" "}
-                <code>20260216120000_profiles_rls_by_organization.sql</code> (RLS por organización)
-                y revisa que cada perfil tenga el <code>organization_id</code> correcto.
+                Si ves permisos raros, revisa el RLS de <code>profiles</code> y que cada perfil tenga
+                el <code> organization_id </code> correcto.
               </p>
             )}
+
             <button type="button" onClick={() => void cargarUsuarios()} style={styles.retryButton}>
               Reintentar
             </button>
@@ -295,6 +306,7 @@ const { error: profileError } = await supabase.from("profiles").insert({
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
             />
+
             <input
               style={styles.input}
               type="email"
@@ -302,6 +314,7 @@ const { error: profileError } = await supabase.from("profiles").insert({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+
             <input
               style={styles.input}
               type="text"
@@ -309,6 +322,7 @@ const { error: profileError } = await supabase.from("profiles").insert({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
+
             <input
               style={styles.input}
               type="password"
@@ -316,16 +330,28 @@ const { error: profileError } = await supabase.from("profiles").insert({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+
             <select
-              style={styles.input}
-              value={rol}
+              style={{
+                ...styles.input,
+                backgroundColor: esPrimerUsuario ? "#eef2ff" : "#ffffff",
+                fontWeight: esPrimerUsuario ? 700 : 400,
+              }}
+              value={rolMostrado}
               onChange={(e) => setRol(e.target.value as Rol)}
+              disabled={esPrimerUsuario}
             >
               <option value="admin">admin</option>
               <option value="manager">manager</option>
               <option value="viewer">viewer</option>
             </select>
           </div>
+
+          {esPrimerUsuario && (
+            <p style={styles.firstUserHint}>
+              Este será el primer usuario de la organización y se creará automáticamente como admin.
+            </p>
+          )}
 
           <button
             type="submit"
@@ -366,15 +392,15 @@ const { error: profileError } = await supabase.from("profiles").insert({
                     <span style={styles.mobileLabel}>Email:</span>
                     <span style={styles.mobileValue}>{usuario.email}</span>
                   </div>
+
                   <div style={styles.mobileRow}>
                     <span style={styles.mobileLabel}>Username:</span>
                     <span style={styles.mobileValue}>{usuario.username}</span>
                   </div>
+
                   <div style={styles.mobileRow}>
                     <span style={styles.mobileLabel}>Activo:</span>
-                    <span style={styles.mobileValue}>
-                      {usuario.activo ? "true" : "false"}
-                    </span>
+                    <span style={styles.mobileValue}>{usuario.activo ? "true" : "false"}</span>
                   </div>
 
                   <button
@@ -518,6 +544,12 @@ const styles: Record<string, CSSProperties> = {
     fontSize: "13px",
     color: "#64748b",
   },
+  firstUserHint: {
+    margin: "0 0 12px 0",
+    fontSize: "13px",
+    color: "#1e40af",
+    fontWeight: 600,
+  },
   tableWrapper: {
     overflowX: "auto",
   },
@@ -590,3 +622,4 @@ const styles: Record<string, CSSProperties> = {
     wordBreak: "break-word",
   },
 };
+
