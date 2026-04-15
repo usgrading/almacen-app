@@ -80,7 +80,7 @@ export default function UsuariosPage() {
   const [rol, setRol] = useState<Rol>("viewer");
 
   const esPrimerUsuario = usuarios.length === 0;
-  const rolMostrado = esPrimerUsuario ? "admin" : rol;
+  const rolMostrado: Rol = esPrimerUsuario ? "admin" : rol;
 
   const canSubmit = useMemo(() => {
     return (
@@ -120,9 +120,7 @@ export default function UsuariosPage() {
         .eq("organization_id", orgId)
         .order("id", { ascending: true });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       const rows = (data as Record<string, unknown>[]) ?? [];
       const filtradas = rows.filter((row) => mismoUuid(row.organization_id, orgId));
@@ -158,7 +156,6 @@ export default function UsuariosPage() {
 
     revisarPantalla();
     window.addEventListener("resize", revisarPantalla);
-
     return () => window.removeEventListener("resize", revisarPantalla);
   }, []);
 
@@ -173,13 +170,12 @@ export default function UsuariosPage() {
   const crearUsuario = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!canSubmit || submitting) {
-      return;
-    }
+    if (!canSubmit || submitting) return;
 
     try {
       setSubmitting(true);
 
+      // Guardar tu org ANTES del signUp
       await ensureMiOrganizationId(supabase);
       const orgId = await getMiOrganizationId(supabase);
 
@@ -187,6 +183,7 @@ export default function UsuariosPage() {
         throw new Error("No se pudo determinar tu organización. Vuelve a iniciar sesión.");
       }
 
+      const rolFinal: Rol = usuarios.length === 0 ? "admin" : rol;
       const emailRedirectTo = getAuthEmailRedirectUrl("/dashboard");
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
@@ -197,34 +194,35 @@ export default function UsuariosPage() {
         },
       });
 
-      if (signUpError) {
-        throw signUpError;
-      }
+      if (signUpError) throw signUpError;
 
       const userId = authData.user?.id;
       if (!userId) {
         throw new Error("No se pudo obtener el ID del usuario creado.");
       }
 
-      const rolFinal: Rol = esPrimerUsuario ? "admin" : rol;
+      // IMPORTANTE: upsert para sobrescribir profile automático si Supabase/trigger ya lo creó
+      const { error: profileError } = await supabase.from("profiles").upsert(
+        {
+          id: userId,
+          organization_id: orgId,
+          email: email.trim(),
+          username: username.trim(),
+          nombre: nombre.trim(),
+          rol: rolFinal,
+          activo: true,
+          debe_cambiar_password: true,
+        },
+        {
+          onConflict: "id",
+        }
+      );
 
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: userId,
-        organization_id: orgId,
-        email: email.trim(),
-        username: username.trim(),
-        nombre: nombre.trim(),
-        rol: rolFinal,
-        activo: true,
-        debe_cambiar_password: true,
-      });
-
-      if (profileError) {
-        throw profileError;
-      }
+      if (profileError) throw profileError;
 
       resetForm();
       await cargarUsuarios();
+
       alert(`Usuario creado correctamente con rol "${rolFinal}".`);
     } catch (error) {
       alert(getSupabaseErrorMessage(error) || "Error al crear el usuario");
@@ -242,9 +240,7 @@ export default function UsuariosPage() {
         .update({ activo: nuevoEstado })
         .eq("id", usuario.id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setUsuarios((prev) =>
         prev.map((u) => (u.id === usuario.id ? { ...u, activo: nuevoEstado } : u))
@@ -278,14 +274,14 @@ export default function UsuariosPage() {
 
             {cargaError.toLowerCase().includes("api key") ? (
               <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
-                En el hosting define <code>NEXT_PUBLIC_SUPABASE_URL</code> y la clave pública anónima
-                como <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> o{" "}
+                En el hosting define <code>NEXT_PUBLIC_SUPABASE_URL</code> y la clave pública
+                anónima como <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> o{" "}
                 <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>.
               </p>
             ) : (
               <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#64748B" }}>
-                Si ves permisos raros, revisa el RLS de <code>profiles</code> y que cada perfil tenga
-                el <code> organization_id </code> correcto.
+                Si ves permisos raros, revisa el RLS de <code>profiles</code> y que cada perfil
+                tenga el <code>organization_id</code> correcto.
               </p>
             )}
 
