@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { PageLogo } from '@/components/PageLogo';
 import { supabase } from '@/lib/supabase';
 
 type InventarioItem = {
@@ -47,6 +48,7 @@ export default function ReporteInventarioUSAPage() {
         <button type="button" onClick={() => router.push('/reportes')} style={styles.backButton}>
           ← Reportes
         </button>
+        <PageLogo />
         <h1 style={styles.title}>Inventario USA</h1>
 
         {loading ? (

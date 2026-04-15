@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { PageLogo } from '@/components/PageLogo';
 
 export default function ReportesPage() {
   const router = useRouter();
@@ -15,6 +16,8 @@ export default function ReportesPage() {
         >
           ← Inicio
         </button>
+
+        <PageLogo />
 
         <h1 style={styles.title}>Reportes</h1>
 

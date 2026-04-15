@@ -2,6 +2,7 @@
 
 import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PageLogo } from "@/components/PageLogo";
 import { supabase } from "@/lib/supabase";
 import { ensureMiOrganizationId, getMiOrganizationId } from "@/lib/organization";
 
@@ -254,6 +255,8 @@ export default function UsuariosPage() {
         >
           ← Inicio
         </button>
+
+        <PageLogo />
 
         <h1 style={styles.title}>Gestión de Usuarios</h1>
 
