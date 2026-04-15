@@ -2,9 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { getAuthEmailRedirectUrl } from '@/lib/auth-redirect';
-import { ensureMiOrganizationId } from '@/lib/organization';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -19,7 +16,7 @@ export default function SignupPage() {
   const handleRegister = async () => {
     if (loading) return;
 
-    if (!name || !email || !password || !confirmPassword) {
+    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
       alert('Llena todos los campos');
       return;
     }
@@ -29,44 +26,42 @@ export default function SignupPage() {
       return;
     }
 
+    if (password.length < 6) {
+      alert('La contraseña debe tener mínimo 6 caracteres');
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const emailRedirectTo = getAuthEmailRedirectUrl('/dashboard');
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          ...(emailRedirectTo ? { emailRedirectTo } : {}),
-          data: {
-            name,
-          },
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          nombre: name.trim(),
+          email: email.trim(),
+          password,
+        }),
       });
-       
-      
-    
-      if (error) {
-        alert('ERROR: ' + error.message);
-        return;
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || 'No se pudo crear la cuenta.');
       }
 
       alert(
-        'Usuario creado\n\n' +
-          'Email: ' + (data.user?.email ?? 'sin email') + '\n' +
-          'Sesión: ' + (data.session ? 'sí' : 'no')
+        result?.esPrimerUsuario
+          ? 'Cuenta creada. Este usuario quedó como admin.'
+          : 'Cuenta creada correctamente.'
       );
 
-      if (data.session) {
-        await ensureMiOrganizationId(supabase);
-        router.push('/dashboard');
-      } else {
-        alert('Revisa tu correo para confirmar la cuenta.');
-      }
-    } catch (err) {
-      alert('Ocurrió un error inesperado');
-      console.error(err);
+      router.push('/login');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Ocurrió un error inesperado');
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -129,6 +124,7 @@ export default function SignupPage() {
 
         <input
           placeholder="Correo"
+          type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           style={{
@@ -148,7 +144,7 @@ export default function SignupPage() {
             onChange={(e) => setPassword(e.target.value)}
             style={{
               width: '100%',
-              padding: '14px 56px 14px 14px',
+              padding: '14px 72px 14px 14px',
               borderRadius: 10,
               border: '1px solid #ccc',
             }}
