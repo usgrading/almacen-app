@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
+import { ensureMiOrganizationId } from '@/lib/organization';
 
 type Profile = {
   nombre: string | null;
@@ -35,6 +36,8 @@ export default function DashboardPage() {
         router.push('/login');
         return;
       }
+
+      await ensureMiOrganizationId(supabase);
 
       const { data: profileData } = await supabase
         .from('profiles')

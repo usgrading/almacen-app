@@ -4,6 +4,7 @@ import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getAuthEmailRedirectUrl } from "@/lib/auth-redirect";
+import { ensureMiOrganizationId, getMiOrganizationId } from "@/lib/organization";
 
 type Rol = "admin" | "manager" | "viewer";
 
@@ -24,11 +25,6 @@ function getSupabaseErrorMessage(error: unknown): string {
     if (typeof m === "string" && m.length > 0) return m;
   }
   return "Error desconocido";
-}
-
-function esAltaDesdePanelUsuarios(u: Usuario): boolean {
-  if (u.rol === "admin" || u.rol === "manager") return true;
-  return u.debe_cambiar_password === true && u.username.trim().length > 0;
 }
 
 function mapProfileRow(row: Record<string, unknown>): Usuario | null {
@@ -72,12 +68,6 @@ export default function UsuariosPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rol, setRol] = useState<Rol>("viewer");
-  const [ocultarRegistroPropio, setOcultarRegistroPropio] = useState(true);
-
-  const usuariosListados = useMemo(() => {
-    if (!ocultarRegistroPropio) return usuarios;
-    return usuarios.filter(esAltaDesdePanelUsuarios);
-  }, [usuarios, ocultarRegistroPropio]);
 
   const canSubmit = useMemo(() => {
     return (
@@ -93,9 +83,18 @@ export default function UsuariosPage() {
       setLoading(true);
       setCargaError(null);
 
+      await ensureMiOrganizationId(supabase);
+      const orgId = await getMiOrganizationId(supabase);
+      if (!orgId) {
+        setCargaError("No hay sesión. Inicia sesión para ver tu equipo.");
+        setUsuarios([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
+        .eq("organization_id", orgId)
         .order("id", { ascending: true });
 
       if (error) {
@@ -109,7 +108,12 @@ export default function UsuariosPage() {
       setUsuarios(mapped);
     } catch (error) {
       const detail = getSupabaseErrorMessage(error);
-      setCargaError(detail);
+      const hint =
+        detail.toLowerCase().includes("organization_id") ||
+        detail.toLowerCase().includes("schema cache")
+          ? " Ejecuta en Supabase la migración que añade la columna organization_id a profiles."
+          : "";
+      setCargaError(detail + hint);
       setUsuarios([]);
       console.error("profiles select:", error);
     } finally {
@@ -169,8 +173,15 @@ export default function UsuariosPage() {
         throw new Error("No se pudo obtener el ID del usuario creado.");
       }
 
+      await ensureMiOrganizationId(supabase);
+      const orgId = await getMiOrganizationId(supabase);
+      if (!orgId) {
+        throw new Error("No se pudo determinar tu organización. Vuelve a iniciar sesión.");
+      }
+
       const { error: profileError } = await supabase.from("profiles").insert({
         id: userId,
+        organization_id: orgId,
         email: email.trim(),
         username: username.trim(),
         nombre: nombre.trim(),
@@ -312,33 +323,20 @@ export default function UsuariosPage() {
 
         <section style={styles.tableSection}>
           <h2 style={styles.sectionTitle}>Listado de usuarios</h2>
-
-          <label style={styles.filterRow}>
-            <input
-              type="checkbox"
-              checked={ocultarRegistroPropio}
-              onChange={(e) => setOcultarRegistroPropio(e.target.checked)}
-            />
-            <span>
-              Solo equipo dado de alta desde aquí (ocultar quien se registró solo en{" "}
-              <code>/signup</code>)
-            </span>
-          </label>
+          <p style={styles.orgHint}>
+            Solo ves a quienes tú diste de alta aquí; no aparecen cuentas ni usuarios de otras
+            empresas.
+          </p>
 
           {loading ? (
             <p>Cargando usuarios...</p>
           ) : cargaError ? (
             <div style={styles.emptyCell}>Corrige el error arriba y pulsa Reintentar.</div>
           ) : usuarios.length === 0 ? (
-            <div style={styles.emptyCell}>No hay usuarios registrados.</div>
-          ) : usuariosListados.length === 0 ? (
-            <div style={styles.emptyCell}>
-              Ningún usuario coincide con el filtro. Desmarca la casilla para ver todos (
-              {usuarios.length} en total).
-            </div>
+            <div style={styles.emptyCell}>No hay usuarios en tu organización.</div>
           ) : esCel ? (
             <div style={styles.mobileList}>
-              {usuariosListados.map((usuario) => (
+              {usuarios.map((usuario) => (
                 <div key={usuario.id} style={styles.mobileCard}>
                   <div style={styles.mobileHeader}>
                     <strong style={styles.mobileTitle}>{usuario.nombre}</strong>
@@ -388,7 +386,7 @@ export default function UsuariosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {usuariosListados.map((usuario) => (
+                  {usuarios.map((usuario) => (
                     <tr key={usuario.id}>
                       <td style={styles.td}>{usuario.nombre}</td>
                       <td style={styles.td}>{usuario.email}</td>
@@ -496,14 +494,10 @@ const styles: Record<string, CSSProperties> = {
     padding: "16px",
     backgroundColor: "#ffffff",
   },
-  filterRow: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: "10px",
-    marginBottom: "14px",
-    fontSize: "14px",
-    color: "#334155",
-    cursor: "pointer",
+  orgHint: {
+    margin: "0 0 14px 0",
+    fontSize: "13px",
+    color: "#64748b",
   },
   tableWrapper: {
     overflowX: "auto",

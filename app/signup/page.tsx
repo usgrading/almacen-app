@@ -2,13 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import { getAuthEmailRedirectUrl } from '@/lib/auth-redirect';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-);
+import { ensureMiOrganizationId } from '@/lib/organization';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -63,6 +59,7 @@ export default function SignupPage() {
       );
 
       if (data.session) {
+        await ensureMiOrganizationId(supabase);
         router.push('/dashboard');
       } else {
         alert('Revisa tu correo para confirmar la cuenta.');
