@@ -112,12 +112,57 @@ export default function ReporteEntradasPage() {
     }
     setEliminando(true);
     try {
-      const { error } = await supabase.from('entradas').delete().in('id', ids);
-      if (error) throw error;
-      setEntradas((prev) => prev.filter((e) => !selected.has(String(e.id))));
+      const tabla = 'entradas';
+      console.info('[reportes/entradas] Solicitando DELETE', {
+        tabla,
+        ids,
+        cantidad: ids.length,
+      });
+
+      const { data: filasBorradas, error } = await supabase
+        .from(tabla)
+        .delete()
+        .in('id', ids)
+        .select('id');
+
+      console.info('[reportes/entradas] Respuesta DELETE', {
+        tabla,
+        error: error ?? null,
+        filasDevueltas: filasBorradas?.length ?? 0,
+        idsConfirmados: filasBorradas?.map((r) => r.id) ?? [],
+      });
+
+      if (error) {
+        console.error('[reportes/entradas] Error Supabase DELETE', error);
+        throw error;
+      }
+
+      if (!filasBorradas?.length) {
+        const msg =
+          'No se eliminó ningún registro en la base de datos (tabla entradas). Suele deberse a permisos RLS o políticas de borrado. Revisa la consola para el detalle.';
+        console.error('[reportes/entradas] DELETE sin filas afectadas', {
+          idsSolicitados: ids,
+        });
+        alert(msg);
+        return;
+      }
+
+      const idsOk = new Set(filasBorradas.map((r) => String(r.id)));
+      if (filasBorradas.length < ids.length) {
+        console.warn('[reportes/entradas] Borrado parcial', {
+          solicitados: ids.length,
+          borrados: filasBorradas.length,
+        });
+        alert(
+          `Solo se eliminaron ${filasBorradas.length} de ${ids.length} registros. El resto no se pudo borrar (permisos o datos).`
+        );
+      }
+
+      setEntradas((prev) => prev.filter((e) => !idsOk.has(String(e.id))));
       clear();
       setModalEliminar(false);
     } catch (e) {
+      console.error('[reportes/entradas] Fallo al eliminar', e);
       alert(e instanceof Error ? e.message : 'Error al eliminar');
     } finally {
       setEliminando(false);
