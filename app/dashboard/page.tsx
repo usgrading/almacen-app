@@ -1,11 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { ensureMiOrganizationId } from '@/lib/organization';
 import { isAdmin, normalizeRole, type AppRole } from '@/lib/roles';
+import {
+  appBtnPrimario,
+  appCard,
+  appFondoMain,
+  appSubtituloPagina,
+  appTituloPagina,
+} from '@/lib/app-ui';
 
 type Profile = {
   nombre: string | null;
@@ -83,19 +90,21 @@ export default function DashboardPage() {
     return (
       <main
         style={{
-          ...pageStyle,
+          ...appFondoMain,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <p style={{ color: '#1F2937', fontSize: 16 }}>Cargando...</p>
+        <p style={{ color: '#64748b', fontSize: 15, fontWeight: 500 }}>
+          Cargando...
+        </p>
       </main>
     );
   }
 
   return (
-    <main style={pageStyle}>
+    <main style={appFondoMain}>
       <div style={{ maxWidth: esCel ? 520 : 1100, margin: '0 auto' }}>
         <div style={cardStyle}>
           <div
@@ -122,11 +131,8 @@ export default function DashboardPage() {
 
           <h1
             style={{
-              margin: '0 0 10px 0',
-              textAlign: 'center',
-              fontSize: esCel ? 24 : 28,
-              color: '#1E40AF',
-              fontWeight: 700,
+              ...appTituloPagina,
+              marginBottom: 10,
             }}
           >
             Almacén
@@ -134,9 +140,9 @@ export default function DashboardPage() {
 
           <div
             style={{
-              background: '#F8FAFC',
-              border: '1px solid #E2E8F0',
-              borderRadius: 14,
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 12,
               padding: 16,
               marginBottom: 16,
               textAlign: 'center',
@@ -155,11 +161,9 @@ export default function DashboardPage() {
 
             <p
               style={{
-                margin: 0,
-                marginTop: 4,
-                color: '#64748B',
+                ...appSubtituloPagina,
+                margin: '4px 0 0 0',
                 fontSize: 14,
-                fontWeight: 500,
               }}
             >
               {labelFromProfile(profile)}
@@ -218,9 +222,11 @@ export default function DashboardPage() {
           </div>
 
           <button
+            type="button"
+            className="app-btn-primario"
             onClick={handleLogout}
             style={{
-              ...logoutButtonStyle,
+              ...appBtnPrimario,
               marginTop: 14,
             }}
           >
@@ -232,47 +238,28 @@ export default function DashboardPage() {
   );
 }
 
-const pageStyle: React.CSSProperties = {
-  minHeight: '100vh',
-  background: '#EEF3F8',
-  padding: 20,
-  fontFamily: 'Arial, sans-serif',
+const cardStyle: CSSProperties = {
+  ...appCard,
+  padding: 'clamp(20px, 4vw, 28px)',
 };
 
-const cardStyle: React.CSSProperties = {
-  background: '#FFFFFF',
-  borderRadius: 20,
-  padding: 20,
-  boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
-  border: '1px solid #DCE5EE',
-};
-
-const buttonStyle: React.CSSProperties = {
+const buttonStyle: CSSProperties = {
   width: '100%',
   padding: 16,
-  borderRadius: 14,
-  border: '1px solid #D7E0EA',
-  background: '#FFFFFF',
-  color: '#1F2937',
+  borderRadius: 12,
+  border: '1px solid #e2e8f0',
+  background: '#ffffff',
+  color: '#0f172a',
   fontSize: 16,
   fontWeight: 600,
   cursor: 'pointer',
-  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
-  transition: 'all 0.2s ease',
+  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06)',
+  transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
 };
 
-const buttonContentStyle: React.CSSProperties = {
+const buttonContentStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
   gap: 8,
-};
-
-const logoutButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
-  marginBottom: 0,
-  background: '#1E40AF',
-  color: '#FFFFFF',
-  border: '1px solid #1E40AF',
-  boxShadow: '0 8px 18px rgba(30, 64, 175, 0.20)',
 };

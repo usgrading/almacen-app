@@ -1,0 +1,40 @@
+/* Tema unificado (referencia: login). Requiere clase .app-theme en un ancestro (p. ej. body). */
+
+.app-theme input.app-input-field:focus,
+.app-theme textarea.app-input-field:focus,
+.app-theme select.app-input-field:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.app-theme input.app-input-field::placeholder,
+.app-theme textarea.app-input-field::placeholder {
+  color: #94a3b8;
+}
+
+.app-theme .app-btn-primario:not(:disabled):hover {
+  filter: brightness(1.05);
+  box-shadow: 0 6px 20px rgba(30, 64, 175, 0.38);
+}
+
+.app-theme .app-btn-primario:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.app-theme .app-btn-secundario:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.app-theme .app-toggle-ojo:hover {
+  color: #475569 !important;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.app-theme .app-nav-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

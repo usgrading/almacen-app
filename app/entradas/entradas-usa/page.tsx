@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { canMutate, getUserRole, isViewer, type AppRole } from '@/lib/roles';
@@ -10,6 +10,15 @@ import {
 } from '@/lib/entrada-inventario';
 import { formatoDosDecimales } from '@/lib/format-money';
 import { CampoFormulario } from '@/components/CampoFormulario';
+import {
+  appBtnPrimario,
+  appBtnPrimarioDisabled,
+  appCardInner,
+  appFondoMain,
+  appInput,
+  appNavLink,
+  appTituloPagina,
+} from '@/lib/app-ui';
 
 type EntradaResumen = {
   producto?: string | null;
@@ -56,36 +65,28 @@ export default function EntradasPage() {
     undefined
   );
 
-  const estiloInput: React.CSSProperties = {
-    width: '100%',
-    padding: 12,
+  const estiloInput: CSSProperties = {
+    ...appInput,
     marginBottom: 12,
-    borderRadius: 10,
-    border: '1px solid #D1D5DB',
-    background: '#F8FAFC',
-    color: '#1F2937',
-    fontSize: 15,
-    outline: 'none',
-    boxSizing: 'border-box',
   };
 
-  const estiloInputCampo: React.CSSProperties = {
-    ...estiloInput,
+  const estiloInputCampo: CSSProperties = {
+    ...appInput,
     marginBottom: 0,
   };
 
-  const filaDinero: React.CSSProperties = {
+  const filaDinero: CSSProperties = {
     display: 'flex',
     alignItems: 'stretch',
     width: '100%',
-    borderRadius: 10,
-    border: '1px solid #D1D5DB',
-    background: '#F8FAFC',
+    borderRadius: 12,
+    border: '1px solid #e2e8f0',
+    background: '#f8fafc',
     overflow: 'hidden',
     boxSizing: 'border-box',
   };
 
-  const prefijoDolar: React.CSSProperties = {
+  const prefijoDolar: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -93,67 +94,67 @@ export default function EntradasPage() {
     fontWeight: 600,
     fontSize: 16,
     color: '#475569',
-    background: '#EEF2F7',
-    borderRight: '1px solid #D1D5DB',
+    background: '#eef2f7',
+    borderRight: '1px solid #e2e8f0',
     flexShrink: 0,
   };
 
-  const inputDinero: React.CSSProperties = {
+  const inputDinero: CSSProperties = {
     flex: 1,
     minWidth: 0,
-    padding: 12,
+    padding: '13px 15px',
     border: 'none',
     borderRadius: 0,
-    background: '#F8FAFC',
-    color: '#1F2937',
+    background: '#f8fafc',
+    color: '#0f172a',
     fontSize: 15,
     outline: 'none',
     boxSizing: 'border-box',
   };
 
-  const filaDineroTotal: React.CSSProperties = {
+  const filaDineroTotal: CSSProperties = {
     ...filaDinero,
-    background: '#F1F5F9',
-    borderColor: '#CBD5E1',
+    background: '#f1f5f9',
+    borderColor: '#cbd5e1',
   };
 
-  const prefijoDolarTotal: React.CSSProperties = {
+  const prefijoDolarTotal: CSSProperties = {
     ...prefijoDolar,
-    background: '#E2E8F0',
-    color: '#64748B',
+    background: '#e2e8f0',
+    color: '#64748b',
   };
 
-  const inputDineroTotal: React.CSSProperties = {
+  const inputDineroTotal: CSSProperties = {
     ...inputDinero,
-    background: '#F1F5F9',
+    background: '#f1f5f9',
     color: '#475569',
   };
 
-  const estiloTituloSeccion: React.CSSProperties = {
+  const estiloTituloSeccion: CSSProperties = {
     marginTop: 0,
     marginBottom: 12,
-    color: '#1E40AF',
+    color: '#0f172a',
     fontSize: 16,
     fontWeight: 700,
   };
 
-  const estiloInputDeshabilitado: React.CSSProperties = {
+  const estiloInputDeshabilitado: CSSProperties = {
     ...estiloInput,
-    color: '#94A3B8',
-    background: '#F1F5F9',
+    color: '#94a3b8',
+    background: '#f1f5f9',
     cursor: 'not-allowed',
   };
 
-  const estiloTarjeta: React.CSSProperties = {
-    background: '#F8FAFC',
+  const estiloTarjeta: CSSProperties = {
+    background: '#f8fafc',
     padding: 16,
     borderRadius: 12,
-    color: '#1F2937',
-    border: '1px solid #E2E8F0',
+    color: '#0f172a',
+    border: '1px solid #e2e8f0',
     marginTop: 20,
   };
 
-  const estiloTextoChico: React.CSSProperties = {
+  const estiloTextoChico: CSSProperties = {
     margin: '4px 0 0 0',
     color: '#475569',
     fontSize: 14,
@@ -519,22 +520,12 @@ export default function EntradasPage() {
   }, [producto, orgIdPerfil]);
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#EEF3F8',
-        padding: 20,
-        fontFamily: 'Arial, sans-serif',
-      }}
-    >
+    <main style={appFondoMain}>
       <div style={{ maxWidth: 420, margin: '0 auto' }}>
         <div
           style={{
-            background: '#FFFFFF',
+            ...appCardInner,
             padding: 20,
-            borderRadius: 16,
-            boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
-            border: '1px solid #DCE5EE',
           }}
         >
           <div style={{ textAlign: 'center', marginBottom: 12 }}>
@@ -550,26 +541,18 @@ export default function EntradasPage() {
           </div>
 
           <button
+            type="button"
+            className="app-nav-link"
             onClick={() => router.push('/dashboard')}
-            style={{
-              marginBottom: 10,
-              background: 'none',
-              border: 'none',
-              color: '#1E40AF',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            style={{ ...appNavLink, marginBottom: 10 }}
           >
             ← Inicio
           </button>
 
           <h2
             style={{
-              marginTop: 0,
+              ...appTituloPagina,
               marginBottom: 18,
-              textAlign: 'center',
-              color: '#1F2937',
-              fontSize: 22,
             }}
           >
             Entrada <span className="fi fi-us" style={{ marginLeft: 8 }}></span>
@@ -604,13 +587,13 @@ export default function EntradasPage() {
               <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
                 <button
                   type="button"
+                  className="app-btn-primario"
                   style={{
+                    ...appBtnPrimario,
                     flex: 1,
-                    padding: 12,
-                    borderRadius: 10,
-                    background: '#1E40AF',
-                    color: '#fff',
-                    border: 'none',
+                    width: 'auto',
+                    minWidth: 0,
+                    padding: '12px 14px',
                   }}
                 >
                   Subir Factura
@@ -618,13 +601,13 @@ export default function EntradasPage() {
 
                 <button
                   type="button"
+                  className="app-btn-primario"
                   style={{
+                    ...appBtnPrimario,
                     flex: 1,
-                    padding: 12,
-                    borderRadius: 10,
-                    background: '#1E40AF',
-                    color: '#fff',
-                    border: 'none',
+                    width: 'auto',
+                    minWidth: 0,
+                    padding: '12px 14px',
                   }}
                 >
                   Tomar Foto
@@ -633,14 +616,14 @@ export default function EntradasPage() {
 
               <button
                 type="button"
+                className="app-btn-primario"
                 style={{
+                  ...appBtnPrimario,
                   width: '100%',
-                  padding: 12,
-                  borderRadius: 10,
-                  background: '#334155',
-                  color: '#fff',
-                  border: 'none',
+                  padding: '12px 14px',
                   marginBottom: 10,
+                  background: '#334155',
+                  boxShadow: '0 4px 16px rgba(51, 65, 85, 0.35)',
                 }}
               >
                 🤖 Analizar Factura
@@ -665,6 +648,7 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Supplier" htmlFor="entrada-usa-proveedor">
               <input
                 id="entrada-usa-proveedor"
+                className="app-input-field"
                 value={proveedor}
                 onChange={(e) => setProveedor(e.target.value)}
                 style={estiloInputCampo}
@@ -674,6 +658,7 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Invoice number" htmlFor="entrada-usa-factura">
               <input
                 id="entrada-usa-factura"
+                className="app-input-field"
                 value={numeroFactura}
                 onChange={(e) => setNumeroFactura(e.target.value)}
                 style={estiloInputCampo}
@@ -683,6 +668,7 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Date" htmlFor="entrada-usa-fecha">
               <input
                 id="entrada-usa-fecha"
+                className="app-input-field"
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
@@ -703,6 +689,7 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Part photo" htmlFor="entrada-usa-foto-pieza">
               <input
                 id="entrada-usa-foto-pieza"
+                className="app-input-field"
                 disabled
                 style={{ ...estiloInputDeshabilitado, marginBottom: 0 }}
               />
@@ -711,6 +698,7 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Part name" htmlFor="entrada-usa-producto">
               <input
                 id="entrada-usa-producto"
+                className="app-input-field"
                 value={producto}
                 onChange={(e) => setProducto(e.target.value)}
                 style={estiloInputCampo}
@@ -747,6 +735,7 @@ export default function EntradasPage() {
                 <CampoFormulario etiqueta="Minimum stock" htmlFor="entrada-usa-minimo">
                   <select
                     id="entrada-usa-minimo"
+                    className="app-input-field"
                     value={minimo}
                     onChange={(e) => setMinimo(e.target.value)}
                     style={estiloInputCampo}
@@ -763,6 +752,7 @@ export default function EntradasPage() {
                 <CampoFormulario etiqueta="Maximum stock" htmlFor="entrada-usa-maximo">
                   <select
                     id="entrada-usa-maximo"
+                    className="app-input-field"
                     value={maximo}
                     onChange={(e) => setMaximo(e.target.value)}
                     style={estiloInputCampo}
@@ -781,6 +771,7 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Quantity" htmlFor="entrada-usa-cantidad">
               <input
                 id="entrada-usa-cantidad"
+                className="app-input-field"
                 type="text"
                 inputMode="numeric"
                 value={cantidad}
@@ -794,6 +785,7 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Unit" htmlFor="entrada-usa-unidad">
               <select
                 id="entrada-usa-unidad"
+                className="app-input-field"
                 value={unidad}
                 onChange={(e) => setUnidad(e.target.value)}
                 style={estiloInputCampo}
@@ -818,6 +810,7 @@ export default function EntradasPage() {
                 </span>
                 <input
                   id="entrada-usa-costo-unit"
+                  className="app-input-field"
                   type="number"
                   step="0.01"
                   min="0"
@@ -843,6 +836,7 @@ export default function EntradasPage() {
                 </span>
                 <input
                   id="entrada-usa-costo-total"
+                  className="app-input-field"
                   type="number"
                   step="0.01"
                   min="0"
@@ -858,6 +852,7 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Location" htmlFor="entrada-usa-ubicacion">
               <select
                 id="entrada-usa-ubicacion"
+                className="app-input-field"
                 value={ubicacion}
                 onChange={(e) => setUbicacion(e.target.value)}
                 style={estiloInputCampo}
@@ -879,6 +874,7 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Notes" htmlFor="entrada-usa-notas">
               <textarea
                 id="entrada-usa-notas"
+                className="app-input-field"
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
                 style={{
@@ -892,22 +888,14 @@ export default function EntradasPage() {
 
           <button
             type="button"
+            className="app-btn-primario"
             onClick={handleSubmit}
             disabled={cargando || !puedeRegistrar}
-            style={{
-              width: '100%',
-              padding: 16,
-              marginTop: 8,
-              borderRadius: 12,
-              background: puedeRegistrar ? '#1E40AF' : '#94A3B8',
-              color: '#FFFFFF',
-              fontWeight: 600,
-              fontSize: 16,
-              border: 'none',
-              cursor: puedeRegistrar && !cargando ? 'pointer' : 'not-allowed',
-              boxShadow: '0 8px 18px rgba(30, 64, 175, 0.20)',
-              opacity: puedeRegistrar ? 1 : 0.85,
-            }}
+            style={
+              cargando || !puedeRegistrar
+                ? { ...appBtnPrimarioDisabled, marginTop: 8 }
+                : { ...appBtnPrimario, marginTop: 8 }
+            }
           >
             {cargando ? 'Guardando...' : !puedeRegistrar ? 'Solo lectura' : 'Guardar Entrada'}
           </button>

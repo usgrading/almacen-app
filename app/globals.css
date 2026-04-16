@@ -1,10 +1,25 @@
+html {
+  min-height: 100dvh;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #f5f7fb;
-  color: #111827;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI",
+    Arial, Helvetica, sans-serif;
+  color: #0f172a;
+}
+
+body {
+  min-height: 100dvh;
+  background: linear-gradient(
+    165deg,
+    #eef2f9 0%,
+    #f4f6fb 45%,
+    #e8edf6 100%
+  );
+  background-attachment: fixed;
 }
 
 * {

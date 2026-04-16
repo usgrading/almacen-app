@@ -14,6 +14,7 @@ import { useReporteRolAdmin } from '@/hooks/useReporteRolAdmin';
 import { useSeleccionFilas } from '@/hooks/useSeleccionFilas';
 import { getUserRole, isAdmin } from '@/lib/roles';
 import { CampoFormulario } from '@/components/CampoFormulario';
+import { appCardInner, appInput } from '@/lib/app-ui';
 
 type FiltroOrigen = 'TODOS' | 'MX' | 'USA';
 
@@ -353,6 +354,7 @@ export default function InventarioPage() {
         <CampoFormulario etiqueta="Buscar" htmlFor="rep-inv-gen-busqueda">
           <input
             id="rep-inv-gen-busqueda"
+            className="app-input-field"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             style={inputStyleCampo}
@@ -361,10 +363,7 @@ export default function InventarioPage() {
 
         <div
           style={{
-            background: '#FFFFFF',
-            borderRadius: 16,
-            boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
-            border: '1px solid #DCE5EE',
+            ...appCardInner,
             overflow: 'hidden',
           }}
         >
@@ -629,18 +628,19 @@ function renderValor(
   return formatMoney(calculado);
 }
 
-const getFiltroStyle = (activo: boolean): React.CSSProperties => ({
+const getFiltroStyle = (activo: boolean): CSSProperties => ({
   flex: 1,
   padding: 10,
-  borderRadius: 8,
-  border: activo ? '2px solid #1E40AF' : '1px solid #D1D5DB',
-  background: activo ? '#DBEAFE' : '#FFFFFF',
-  color: '#1F2937',
+  borderRadius: 12,
+  border: activo ? '2px solid #1e40af' : '1px solid #e2e8f0',
+  background: activo ? '#dbeafe' : '#ffffff',
+  color: '#0f172a',
   fontWeight: 600,
   cursor: 'pointer',
+  transition: 'border-color 0.2s ease, background 0.2s ease',
 });
 
-const filtroContenidoStyle: React.CSSProperties = {
+const filtroContenidoStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -648,54 +648,47 @@ const filtroContenidoStyle: React.CSSProperties = {
   lineHeight: 1,
 };
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: 12,
+const inputStyle: CSSProperties = {
+  ...appInput,
   marginBottom: 16,
-  borderRadius: 10,
-  border: '1px solid #D1D5DB',
-  background: '#FFFFFF',
-  color: '#1F2937',
-  fontSize: 15,
-  outline: 'none',
-  boxSizing: 'border-box',
 };
 
-const inputStyleCampo: React.CSSProperties = {
-  ...inputStyle,
+const inputStyleCampo: CSSProperties = {
+  ...appInput,
   marginBottom: 0,
 };
 
-const reporteThCheckboxSel: React.CSSProperties = {
+const reporteThCheckboxSel: CSSProperties = {
   ...reporteThCheckbox,
   width: 100,
   maxWidth: 100,
   verticalAlign: 'top',
 };
 
-const reporteTdCheckboxSel: React.CSSProperties = {
+const reporteTdCheckboxSel: CSSProperties = {
   ...reporteTdCheckbox,
   width: 100,
   maxWidth: 100,
   verticalAlign: 'top',
 };
 
-const resumenCardStyle: React.CSSProperties = {
-  background: '#FFFFFF',
-  border: '1px solid #DCE5EE',
-  borderRadius: 14,
+const resumenCardStyle: CSSProperties = {
+  background: '#ffffff',
+  border: '1px solid rgba(226, 232, 240, 0.9)',
+  borderRadius: 12,
   padding: 14,
-  boxShadow: '0 8px 18px rgba(0,0,0,0.05)',
+  boxShadow:
+    '0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 18px rgba(15, 23, 42, 0.06)',
 };
 
-const resumenLabelStyle: React.CSSProperties = {
+const resumenLabelStyle: CSSProperties = {
   fontSize: 13,
   color: '#64748B',
   marginBottom: 6,
   whiteSpace: 'nowrap',
 };
 
-const resumenLabelWithFlagStyle: React.CSSProperties = {
+const resumenLabelWithFlagStyle: CSSProperties = {
   fontSize: 13,
   color: '#64748B',
   marginBottom: 6,
@@ -705,39 +698,39 @@ const resumenLabelWithFlagStyle: React.CSSProperties = {
   gap: 6,
 };
 
-const flagInlineStyle: React.CSSProperties = {
+const flagInlineStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
   lineHeight: 1,
 };
 
-const resumenValueStyle: React.CSSProperties = {
+const resumenValueStyle: CSSProperties = {
   fontSize: 22,
   fontWeight: 700,
   color: '#1F2937',
 };
 
-const mobileRowStyle: React.CSSProperties = {
+const mobileRowStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   gap: 12,
   marginTop: 6,
 };
 
-const mobileLabelStyle: React.CSSProperties = {
+const mobileLabelStyle: CSSProperties = {
   color: '#64748B',
   fontSize: 14,
 };
 
-const mobileValueStyle: React.CSSProperties = {
+const mobileValueStyle: CSSProperties = {
   color: '#334155',
   fontSize: 14,
   fontWeight: 600,
   textAlign: 'right',
 };
 
-const headerStyle: React.CSSProperties = {
+const headerStyle: CSSProperties = {
   textAlign: 'left',
   padding: '12px 14px',
   fontSize: 14,
@@ -746,7 +739,7 @@ const headerStyle: React.CSSProperties = {
   borderBottom: '1px solid #CBD5E1',
 };
 
-const headerStyleCenter: React.CSSProperties = {
+const headerStyleCenter: CSSProperties = {
   textAlign: 'center',
   padding: '12px 14px',
   fontSize: 14,
@@ -755,14 +748,14 @@ const headerStyleCenter: React.CSSProperties = {
   borderBottom: '1px solid #CBD5E1',
 };
 
-const cellStyle: React.CSSProperties = {
+const cellStyle: CSSProperties = {
   padding: '12px 14px',
   fontSize: 14,
   color: '#334155',
   borderBottom: '1px solid #E2E8F0',
 };
 
-const cellStyleCenter: React.CSSProperties = {
+const cellStyleCenter: CSSProperties = {
   padding: '12px 14px',
   fontSize: 14,
   color: '#334155',

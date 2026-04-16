@@ -1,11 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { ensureMiOrganizationId, getMiOrganizationId } from '@/lib/organization';
 import { canMutate, getUserRole, isViewer, type AppRole } from '@/lib/roles';
 import { CampoFormulario } from '@/components/CampoFormulario';
+import {
+  appBtnPrimario,
+  appBtnPrimarioDisabled,
+  appCardInner,
+  appFondoMain,
+  appInput,
+  appNavLink,
+  appTituloPagina,
+} from '@/lib/app-ui';
 
 type Salida = {
   id: string | number;
@@ -216,14 +225,7 @@ export default function SalidasPage() {
   };
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#EEF3F8',
-        padding: 20,
-        fontFamily: 'Arial, sans-serif',
-      }}
-    >
+    <main style={appFondoMain}>
       <div
         style={{
           width: '100%',
@@ -233,11 +235,8 @@ export default function SalidasPage() {
       >
         <div
           style={{
-            background: '#FFFFFF',
+            ...appCardInner,
             padding: 20,
-            borderRadius: 16,
-            boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
-            border: '1px solid #DCE5EE',
           }}
         >
           <div style={{ textAlign: 'center', marginBottom: 12 }}>
@@ -253,27 +252,18 @@ export default function SalidasPage() {
           </div>
 
           <button
+            type="button"
+            className="app-nav-link"
             onClick={() => router.push('/dashboard')}
-            style={{
-              marginBottom: 10,
-              background: 'none',
-              border: 'none',
-              color: '#1E40AF',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            style={{ ...appNavLink, marginBottom: 10 }}
           >
             ← Inicio
           </button>
 
           <h2
             style={{
-              marginTop: 0,
+              ...appTituloPagina,
               marginBottom: 18,
-              textAlign: 'center',
-              color: '#1F2937',
-              fontSize: 22,
-              fontWeight: 600,
             }}
           >
             Salidas
@@ -296,6 +286,7 @@ export default function SalidasPage() {
           <CampoFormulario etiqueta="Foto de pieza (opcional)" htmlFor="salidas-foto">
             <input
               id="salidas-foto"
+              className="app-input-field"
               value={fotoPieza}
               onChange={(e) => setFotoPieza(e.target.value)}
               style={inputStyleCampo}
@@ -310,6 +301,7 @@ export default function SalidasPage() {
             >
               <input
                 id="salidas-producto"
+                className="app-input-field"
                 value={producto}
                 onChange={(e) => {
                   const valor = e.target.value;
@@ -438,6 +430,7 @@ export default function SalidasPage() {
           <CampoFormulario etiqueta="Cantidad" htmlFor="salidas-cantidad">
             <input
               id="salidas-cantidad"
+              className="app-input-field"
               type="text"
               inputMode="numeric"
               value={cantidad}
@@ -451,6 +444,7 @@ export default function SalidasPage() {
           <CampoFormulario etiqueta="Unidad" htmlFor="salidas-unidad">
             <select
               id="salidas-unidad"
+              className="app-input-field"
               value={unidad}
               onChange={(e) => setUnidad(e.target.value)}
               style={inputStyleCampo}
@@ -469,6 +463,7 @@ export default function SalidasPage() {
           <CampoFormulario etiqueta="Destino" htmlFor="salidas-destino">
             <input
               id="salidas-destino"
+              className="app-input-field"
               value={destino}
               onChange={(e) => setDestino(e.target.value)}
               style={inputStyleCampo}
@@ -478,6 +473,7 @@ export default function SalidasPage() {
           <CampoFormulario etiqueta="Vehículo" htmlFor="salidas-vehiculo">
             <input
               id="salidas-vehiculo"
+              className="app-input-field"
               value={vehiculo}
               onChange={(e) => setVehiculo(e.target.value)}
               style={inputStyleCampo}
@@ -487,6 +483,7 @@ export default function SalidasPage() {
           <CampoFormulario etiqueta="Autorizó" htmlFor="salidas-autorizo">
             <input
               id="salidas-autorizo"
+              className="app-input-field"
               value={autorizo}
               onChange={(e) => setAutorizo(e.target.value)}
               style={inputStyleCampo}
@@ -495,14 +492,14 @@ export default function SalidasPage() {
 
           <button
             type="button"
+            className="app-btn-primario"
             onClick={handleGuardar}
             disabled={loading || !puedeRegistrar}
-            style={{
-              ...buttonStyle,
-              background: puedeRegistrar ? '#1E40AF' : '#94A3B8',
-              cursor: puedeRegistrar && !loading ? 'pointer' : 'not-allowed',
-              opacity: puedeRegistrar ? 1 : 0.85,
-            }}
+            style={
+              loading || !puedeRegistrar
+                ? { ...appBtnPrimarioDisabled, marginTop: 4 }
+                : { ...appBtnPrimario, marginTop: 4 }
+            }
           >
             {loading ? 'Guardando...' : !puedeRegistrar ? 'Solo lectura' : 'Guardar salida'}
           </button>
@@ -585,44 +582,22 @@ export default function SalidasPage() {
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
+const inputStyle: CSSProperties = {
+  ...appInput,
   marginBottom: 12,
-  padding: 12,
-  borderRadius: 10,
-  border: '1px solid #D1D5DB',
-  background: '#F8FAFC',
-  color: '#1F2937',
-  fontSize: 15,
-  outline: 'none',
-  boxSizing: 'border-box',
 };
 
-const inputStyleCampo: React.CSSProperties = {
-  ...inputStyle,
+const inputStyleCampo: CSSProperties = {
+  ...appInput,
   marginBottom: 0,
 };
 
-const buttonStyle: React.CSSProperties = {
-  width: '100%',
+const cardStyle: CSSProperties = {
+  background: '#f8fafc',
   padding: 16,
   borderRadius: 12,
-  border: 'none',
-  background: '#1E40AF',
-  color: '#FFFFFF',
-  fontWeight: 600,
-  fontSize: 16,
-  marginTop: 4,
-  boxShadow: '0 8px 18px rgba(30, 64, 175, 0.20)',
-  cursor: 'pointer',
-};
-
-const cardStyle: React.CSSProperties = {
-  background: '#F8FAFC',
-  padding: 16,
-  borderRadius: 12,
-  color: '#1F2937',
-  border: '1px solid #E2E8F0',
+  color: '#0f172a',
+  border: '1px solid #e2e8f0',
 };
 
 const smallText: React.CSSProperties = {

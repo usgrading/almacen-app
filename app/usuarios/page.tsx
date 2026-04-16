@@ -7,6 +7,15 @@ import { supabase } from "@/lib/supabase";
 import { ensureMiOrganizationId, getMiOrganizationId } from "@/lib/organization";
 import { getUserRole, isAdmin } from "@/lib/roles";
 import { CampoFormulario } from "@/components/CampoFormulario";
+import {
+  appBtnPrimario,
+  appBtnPrimarioDisabled,
+  appCardInner,
+  appFondoMain,
+  appInput,
+  appNavLink,
+  appTituloPagina,
+} from "@/lib/app-ui";
 
 type Rol = "admin" | "manager" | "viewer";
 
@@ -292,6 +301,7 @@ export default function UsuariosPage() {
       <div style={{ maxWidth: esCel ? 520 : 1100, margin: "0 auto" }}>
         <button
           type="button"
+          className="app-nav-link"
           onClick={() => router.push("/dashboard")}
           style={styles.backButton}
         >
@@ -325,6 +335,7 @@ export default function UsuariosPage() {
             <CampoFormulario etiqueta="Nombre" htmlFor="usuario-nombre">
               <input
                 id="usuario-nombre"
+                className="app-input-field"
                 style={{ ...styles.input, marginBottom: 0 }}
                 type="text"
                 value={nombre}
@@ -335,6 +346,7 @@ export default function UsuariosPage() {
             <CampoFormulario etiqueta="Correo" htmlFor="usuario-email">
               <input
                 id="usuario-email"
+                className="app-input-field"
                 style={{ ...styles.input, marginBottom: 0 }}
                 type="email"
                 value={email}
@@ -345,6 +357,7 @@ export default function UsuariosPage() {
             <CampoFormulario etiqueta="Usuario (login)" htmlFor="usuario-username">
               <input
                 id="usuario-username"
+                className="app-input-field"
                 style={{ ...styles.input, marginBottom: 0 }}
                 type="text"
                 value={username}
@@ -355,6 +368,7 @@ export default function UsuariosPage() {
             <CampoFormulario etiqueta="Contraseña" htmlFor="usuario-password">
               <input
                 id="usuario-password"
+                className="app-input-field"
                 style={{ ...styles.input, marginBottom: 0 }}
                 type="password"
                 autoComplete="new-password"
@@ -366,10 +380,11 @@ export default function UsuariosPage() {
             <CampoFormulario etiqueta="Rol" htmlFor="usuario-rol">
               <select
                 id="usuario-rol"
+                className="app-input-field"
                 style={{
                   ...styles.input,
                   marginBottom: 0,
-                  backgroundColor: esPrimerUsuario ? "#eef2ff" : "#ffffff",
+                  backgroundColor: esPrimerUsuario ? "#eef2ff" : "#f8fafc",
                   fontWeight: esPrimerUsuario ? 700 : 400,
                 }}
                 value={rolMostrado}
@@ -391,12 +406,13 @@ export default function UsuariosPage() {
 
           <button
             type="submit"
+            className="app-btn-primario"
             disabled={!canSubmit || submitting}
-            style={{
-              ...styles.button,
-              opacity: !canSubmit || submitting ? 0.65 : 1,
-              cursor: !canSubmit || submitting ? "not-allowed" : "pointer",
-            }}
+            style={
+              !canSubmit || submitting
+                ? { ...appBtnPrimarioDisabled, marginTop: 4 }
+                : { ...appBtnPrimario, marginTop: 4 }
+            }
           >
             {submitting ? "Creando..." : "Crear usuario"}
           </button>
@@ -500,15 +516,12 @@ export default function UsuariosPage() {
 
 const styles: Record<string, CSSProperties> = {
   container: {
-    padding: "24px",
-    maxWidth: "1100px",
-    margin: "0 auto",
-    fontFamily: "Arial, sans-serif",
-    color: "#111827",
+    ...appFondoMain,
+    color: "#0f172a",
   },
   title: {
+    ...appTituloPagina,
     marginBottom: "16px",
-    fontSize: "28px",
   },
   errorBanner: {
     marginBottom: "16px",
@@ -520,8 +533,8 @@ const styles: Record<string, CSSProperties> = {
   },
   retryButton: {
     marginTop: "12px",
-    padding: "8px 14px",
-    borderRadius: "8px",
+    padding: "10px 16px",
+    borderRadius: "12px",
     border: "1px solid #991b1b",
     backgroundColor: "#ffffff",
     color: "#991b1b",
@@ -529,24 +542,19 @@ const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
   },
   backButton: {
+    ...appNavLink,
     marginBottom: "10px",
-    background: "none",
-    border: "none",
-    color: "#1E40AF",
-    fontWeight: 600,
-    cursor: "pointer",
-    padding: 0,
   },
   sectionTitle: {
     marginBottom: "12px",
-    fontSize: "20px",
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#0f172a",
   },
   form: {
-    border: "1px solid #e5e7eb",
-    borderRadius: "10px",
-    padding: "16px",
+    ...appCardInner,
+    padding: "18px",
     marginBottom: "24px",
-    backgroundColor: "#f9fafb",
   },
   formGrid: {
     display: "grid",
@@ -555,25 +563,18 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: "12px",
   },
   input: {
-    padding: "10px",
-    borderRadius: "8px",
-    border: "1px solid #d1d5db",
-    fontSize: "14px",
-    width: "100%",
+    ...appInput,
+    fontSize: "15px",
   },
   button: {
-    border: "none",
-    backgroundColor: "#1d4ed8",
-    color: "#ffffff",
-    padding: "10px 14px",
-    borderRadius: "8px",
+    ...appBtnPrimario,
+    width: "auto",
     fontSize: "14px",
+    padding: "10px 14px",
   },
   tableSection: {
-    border: "1px solid #e5e7eb",
-    borderRadius: "10px",
-    padding: "16px",
-    backgroundColor: "#ffffff",
+    ...appCardInner,
+    padding: "18px",
   },
   orgHint: {
     margin: "0 0 14px 0",

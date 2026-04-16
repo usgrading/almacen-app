@@ -8,6 +8,22 @@ import {
   MENSAJE_ERROR_PASSWORD,
   validarPassword,
 } from '@/lib/validar-password';
+import {
+  appBtnPrimario,
+  appBtnPrimarioDisabled,
+  appBtnSecundario,
+  appCardNarrow,
+  appFondoMainCentrado,
+  appInput,
+  appMensajeError,
+  appSubtituloPagina,
+  appTituloPagina,
+} from '@/lib/app-ui';
+
+const tituloSignup = {
+  ...appTituloPagina,
+  fontSize: 'clamp(1.35rem, 3.8vw, 1.6rem)',
+};
 
 export default function SignupPage() {
   const router = useRouter();
@@ -98,95 +114,59 @@ export default function SignupPage() {
 
   if (!sesionVerificada) {
     return (
-      <main
-        style={{
-          minHeight: '100vh',
-          background: '#f5f7fb',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 20,
-        }}
-      >
+      <main style={appFondoMainCentrado}>
         <p style={{ margin: 0, color: '#64748B', fontSize: 15 }}>Cargando...</p>
       </main>
     );
   }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#f5f7fb',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 400,
-          background: 'white',
-          padding: 24,
-          borderRadius: 16,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-        }}
-      >
+    <main style={appFondoMainCentrado}>
+      <div style={appCardNarrow}>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <img
             src="/logo.png"
             alt="Logo"
             style={{
-              width: 80,
-              height: 80,
+              width: 96,
+              height: 96,
               objectFit: 'contain',
-              marginBottom: 12,
+              marginBottom: 8,
             }}
           />
         </div>
 
-        <h1 style={{ marginBottom: 6, textAlign: 'center' }}>
-          Crear cuenta
-        </h1>
+        <h1 style={tituloSignup}>Crear cuenta</h1>
 
-        <p style={{ marginBottom: 20, color: '#555', textAlign: 'center' }}>
+        <p
+          style={{
+            ...appSubtituloPagina,
+            marginBottom: 22,
+          }}
+        >
           Registra un nuevo usuario
         </p>
 
         <CampoFormulario etiqueta="Nombre" htmlFor="signup-nombre" margenInferior={10}>
           <input
             id="signup-nombre"
+            className="app-input-field"
             autoComplete="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            style={{
-              width: '100%',
-              padding: 14,
-              marginBottom: 0,
-              borderRadius: 10,
-              border: '1px solid #ccc',
-              boxSizing: 'border-box',
-            }}
+            style={appInput}
           />
         </CampoFormulario>
 
         <CampoFormulario etiqueta="Correo" htmlFor="signup-email" margenInferior={10}>
           <input
             id="signup-email"
+            className="app-input-field"
             type="email"
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{
-              width: '100%',
-              padding: 14,
-              marginBottom: 0,
-              borderRadius: 10,
-              border: '1px solid #ccc',
-              boxSizing: 'border-box',
-            }}
+            style={appInput}
           />
         </CampoFormulario>
 
@@ -194,6 +174,7 @@ export default function SignupPage() {
           <div style={{ position: 'relative' }}>
             <input
               id="signup-password"
+              className="app-input-field"
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               value={password}
@@ -202,36 +183,76 @@ export default function SignupPage() {
                 if (errorContraseña) setErrorContraseña('');
               }}
               style={{
-                width: '100%',
-                padding: '14px 72px 14px 14px',
-                borderRadius: 10,
-                border: '1px solid #ccc',
-                boxSizing: 'border-box',
+                ...appInput,
+                paddingRight: 48,
               }}
             />
 
-            <span
+            <button
+              type="button"
+              className="app-toggle-ojo"
               onClick={() => setShowPassword(!showPassword)}
+              aria-label={
+                showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'
+              }
               style={{
                 position: 'absolute',
-                right: 12,
+                right: 6,
                 top: '50%',
                 transform: 'translateY(-50%)',
                 cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: 500,
-                color: '#0d47a1',
-                userSelect: 'none',
+                padding: 8,
+                border: 'none',
+                borderRadius: 8,
+                background: 'transparent',
+                color: '#94a3b8',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'color 0.2s ease, background 0.2s ease',
               }}
             >
-              {showPassword ? 'Ocultar' : 'Ver'}
-            </span>
+              {showPassword ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width={20}
+                  height={20}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width={20}
+                  height={20}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
           </div>
         </CampoFormulario>
 
         <CampoFormulario etiqueta="Confirmar contraseña" htmlFor="signup-confirm" margenInferior={errorContraseña ? 6 : 16}>
           <input
             id="signup-confirm"
+            className="app-input-field"
             type={showPassword ? 'text' : 'password'}
             autoComplete="new-password"
             value={confirmPassword}
@@ -239,61 +260,31 @@ export default function SignupPage() {
               setConfirmPassword(e.target.value);
               if (errorContraseña) setErrorContraseña('');
             }}
-            style={{
-              width: '100%',
-              padding: 14,
-              marginBottom: 0,
-              borderRadius: 10,
-              border: '1px solid #ccc',
-              boxSizing: 'border-box',
-            }}
+            style={appInput}
           />
         </CampoFormulario>
 
         {errorContraseña ? (
-          <p
-            role="alert"
-            style={{
-              margin: '0 0 14px 0',
-              color: '#B91C1C',
-              fontSize: 13,
-              lineHeight: 1.35,
-            }}
-          >
+          <p role="alert" style={appMensajeError}>
             {errorContraseña}
           </p>
         ) : null}
 
         <button
+          type="button"
+          className="app-btn-primario"
           onClick={handleRegister}
           disabled={loading}
-          style={{
-            width: '100%',
-            padding: 14,
-            borderRadius: 10,
-            border: 'none',
-            background: loading ? '#7aa7e6' : '#0d47a1',
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: 16,
-            cursor: loading ? 'not-allowed' : 'pointer',
-          }}
+          style={loading ? appBtnPrimarioDisabled : appBtnPrimario}
         >
           {loading ? 'Creando...' : 'Crear cuenta'}
         </button>
 
         <button
+          type="button"
+          className="app-btn-secundario"
           onClick={() => router.push('/login')}
-          style={{
-            width: '100%',
-            marginTop: 10,
-            padding: 14,
-            borderRadius: 10,
-            border: '1px solid #ccc',
-            background: 'white',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-          }}
+          style={{ ...appBtnSecundario, marginTop: 12 }}
         >
           Ya tengo cuenta
         </button>
@@ -301,4 +292,3 @@ export default function SignupPage() {
     </main>
   );
 }
-

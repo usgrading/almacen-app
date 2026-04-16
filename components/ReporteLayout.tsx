@@ -1,32 +1,14 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-
-const navBtnStyle: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  color: "#1E40AF",
-  fontWeight: 600,
-  cursor: "pointer",
-  padding: 0,
-};
-
-const titleStyle: React.CSSProperties = {
-  marginTop: 0,
-  marginBottom: 16,
-  color: "#1F2937",
-  fontSize: 22,
-  textAlign: "center",
-};
-
-const cardShellStyle: React.CSSProperties = {
-  background: "#FFFFFF",
-  borderRadius: 16,
-  boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
-  border: "1px solid #DCE5EE",
-  overflow: "hidden",
-};
+import {
+  appCardInner,
+  appFondoMain,
+  appNavLink,
+  appSubtituloPagina,
+  appTituloPagina,
+} from "@/lib/app-ui";
 
 type ReporteLayoutProps = {
   title: ReactNode;
@@ -59,14 +41,7 @@ export function ReporteLayout({
   }, []);
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#EEF3F8",
-        padding: 20,
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
+    <main style={appFondoMain}>
       <div style={{ maxWidth: esCel ? 520 : 1100, margin: "0 auto" }}>
         <div
           style={{
@@ -80,15 +55,17 @@ export function ReporteLayout({
         >
           <button
             type="button"
+            className="app-nav-link"
             onClick={() => router.push("/dashboard")}
-            style={navBtnStyle}
+            style={appNavLink}
           >
             ← Inicio
           </button>
           <button
             type="button"
+            className="app-nav-link"
             onClick={() => router.push(secondaryNav.href)}
-            style={navBtnStyle}
+            style={appNavLink}
           >
             {secondaryNav.label}
           </button>
@@ -106,7 +83,7 @@ export function ReporteLayout({
 
         <h2
           style={{
-            ...titleStyle,
+            ...appTituloPagina,
             marginBottom: encabezadoAmplio ? 22 : 16,
           }}
         >
@@ -116,29 +93,29 @@ export function ReporteLayout({
         {subtitle ? (
           <div
             style={{
-              marginTop: -8,
+              ...appSubtituloPagina,
+              marginTop: -4,
               marginBottom: 16,
-              color: "#64748B",
-              fontSize: 15,
-              textAlign: "center",
+              maxWidth: 560,
+              marginLeft: "auto",
+              marginRight: "auto",
               lineHeight: 1.5,
-              padding: "0 4px",
             }}
           >
             {subtitle}
           </div>
         ) : null}
 
-        {noCard ? children : <div style={cardShellStyle}>{children}</div>}
+        {noCard ? children : <div style={appCardInner}>{children}</div>}
       </div>
     </main>
   );
 }
 
 /** Misma tabla que inventario general (desktop). */
-export const reporteTheadRow: React.CSSProperties = { background: "#E2E8F0" };
+export const reporteTheadRow: CSSProperties = { background: "#E2E8F0" };
 
-export const reporteTh: React.CSSProperties = {
+export const reporteTh: CSSProperties = {
   textAlign: "left",
   padding: "12px 14px",
   fontSize: 14,
@@ -152,19 +129,19 @@ export const reporteThCenter: React.CSSProperties = {
   textAlign: "center",
 };
 
-export const reporteTd: React.CSSProperties = {
+export const reporteTd: CSSProperties = {
   padding: "12px 14px",
   fontSize: 14,
   color: "#334155",
   borderBottom: "1px solid #E2E8F0",
 };
 
-export const reporteTdCenter: React.CSSProperties = {
+export const reporteTdCenter: CSSProperties = {
   ...reporteTd,
   textAlign: "center",
 };
 
-export const reporteThCheckbox: React.CSSProperties = {
+export const reporteThCheckbox: CSSProperties = {
   ...reporteTh,
   width: 44,
   maxWidth: 44,
@@ -172,7 +149,7 @@ export const reporteThCheckbox: React.CSSProperties = {
   verticalAlign: "middle",
 };
 
-export const reporteTdCheckbox: React.CSSProperties = {
+export const reporteTdCheckbox: CSSProperties = {
   ...reporteTd,
   width: 44,
   maxWidth: 44,
@@ -180,13 +157,13 @@ export const reporteTdCheckbox: React.CSSProperties = {
   verticalAlign: "middle",
 };
 
-export const reporteLoadingBox: React.CSSProperties = {
+export const reporteLoadingBox: CSSProperties = {
   padding: 20,
   textAlign: "center",
   color: "#64748B",
 };
 
-export const reporteEmptyBox: React.CSSProperties = {
+export const reporteEmptyBox: CSSProperties = {
   padding: 20,
   textAlign: "center",
   color: "#64748B",

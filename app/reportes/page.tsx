@@ -56,22 +56,24 @@ const tileBase: CSSProperties = {
   justifyContent: 'center',
   textAlign: 'center',
   padding: '16px 14px',
-  borderRadius: 14,
-  border: '1px solid #E2E8F0',
-  background: '#FAFBFC',
-  color: '#1F2937',
+  borderRadius: 12,
+  border: '1px solid #e2e8f0',
+  background: '#ffffff',
+  color: '#0f172a',
   fontSize: 15,
   fontWeight: 600,
   lineHeight: 1.4,
   cursor: 'pointer',
-  boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
+  boxShadow:
+    '0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06)',
   transition: 'box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background 0.2s ease',
 };
 
 const tileHover: CSSProperties = {
-  background: '#FFFFFF',
-  boxShadow: '0 10px 28px rgba(15, 23, 42, 0.09)',
-  borderColor: '#CBD5E1',
+  background: '#ffffff',
+  boxShadow:
+    '0 1px 2px rgba(15, 23, 42, 0.06), 0 12px 28px rgba(15, 23, 42, 0.1)',
+  borderColor: '#cbd5e1',
   transform: 'translateY(-2px)',
 };
 
