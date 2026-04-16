@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CampoFormulario } from '@/components/CampoFormulario';
+import { supabase } from '@/lib/supabase';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -53,13 +54,21 @@ export default function SignupPage() {
         throw new Error(result?.error || 'No se pudo crear la cuenta.');
       }
 
-      alert(
-        result?.esPrimerUsuario
-          ? 'Cuenta creada. Este usuario quedó como admin.'
-          : 'Cuenta creada correctamente.'
-      );
+      const emailLogin = email.trim().toLowerCase();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: emailLogin,
+        password,
+      });
 
-      router.push('/login');
+      if (signInError) {
+        throw new Error(
+          'Tu cuenta se creó, pero no se pudo iniciar sesión automáticamente: ' +
+            signInError.message +
+            '. Inicia sesión manualmente en la pantalla de acceso.'
+        );
+      }
+
+      router.replace('/dashboard');
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Ocurrió un error inesperado');
       console.error(error);
