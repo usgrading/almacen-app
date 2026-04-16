@@ -28,6 +28,11 @@ import {
 import { subirImagenFacturaAlBucket } from '@/lib/subir-factura-storage';
 import { solicitarAnalisisFactura } from '@/lib/analizar-factura-client';
 import { fechaTextoAInputDate, totalTextoACostoTotal } from '@/lib/factura-campos-helpers';
+import {
+  estiloInputFileOcultoMovil,
+  esProbableImagenFactura,
+  logFacturaMovil,
+} from '@/lib/factura-archivo-movil';
 
 type EntradaResumen = {
   producto?: string | null;
@@ -83,22 +88,46 @@ export default function EntradasPage() {
   const refInputCamaraFactura = useRef<HTMLInputElement>(null);
   const [analizandoFactura, setAnalizandoFactura] = useState(false);
 
-  const aplicarArchivoFactura = (e: ChangeEvent<HTMLInputElement>) => {
-    const input = e.target;
-    const list = input.files;
-    input.value = '';
-    if (!list || list.length === 0) return;
-    const file = list[0];
-    if (!file.type.startsWith('image/')) {
-      alert('Solo se permiten archivos de imagen (JPG, PNG, etc.).');
-      return;
-    }
-    setPreviewFacturaUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(file);
-    });
-    setArchivoFactura(file);
-  };
+  const aplicarArchivoFacturaDesde =
+    (origenInput: 'galeria' | 'camara') =>
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const input = e.currentTarget;
+      logFacturaMovil('mx', 'onChange', { origenInput });
+      const list = input.files;
+      if (!list || list.length === 0) {
+        logFacturaMovil('mx', 'onChange: sin archivo (cancelación o vacío)');
+        queueMicrotask(() => {
+          input.value = '';
+        });
+        return;
+      }
+      const file = list[0];
+      logFacturaMovil('mx', 'archivo detectado', {
+        nombre: file.name,
+        tipo: file.type || '(vacío)',
+        tamaño: file.size,
+      });
+      if (!esProbableImagenFactura(file, origenInput)) {
+        alert(
+          'Solo se permiten archivos de imagen (JPG, PNG, HEIC, etc.). Si el problema continúa, prueba con otra foto o desde galería.'
+        );
+        queueMicrotask(() => {
+          input.value = '';
+        });
+        return;
+      }
+      setPreviewFacturaUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        const url = URL.createObjectURL(file);
+        logFacturaMovil('mx', 'preview: createObjectURL generado');
+        return url;
+      });
+      setArchivoFactura(file);
+      logFacturaMovil('mx', 'estado: archivoFactura actualizado');
+      queueMicrotask(() => {
+        input.value = '';
+      });
+    };
 
   useEffect(() => {
     return () => {
@@ -111,6 +140,11 @@ export default function EntradasPage() {
       alert('Primero selecciona una factura');
       return;
     }
+    logFacturaMovil('mx', 'Analizar Factura: envío a API', {
+      nombre: archivoFactura.name,
+      tipo: archivoFactura.type || '(vacío)',
+      tamaño: archivoFactura.size,
+    });
     setAnalizandoFactura(true);
     try {
       const result = await solicitarAnalisisFactura(archivoFactura);
@@ -312,13 +346,25 @@ export default function EntradasPage() {
 
       let fotoFacturaPublica: string | null = null;
       if (archivoFactura) {
+        logFacturaMovil('mx', 'guardar: inicio upload a Supabase', {
+          nombre: archivoFactura.name,
+          tipo: archivoFactura.type || '(vacío)',
+          tamaño: archivoFactura.size,
+        });
         const subida = await subirImagenFacturaAlBucket(supabase, archivoFactura);
         if ('error' in subida) {
-          alert(subida.error);
+          logFacturaMovil('mx', 'guardar: upload falló', { error: subida.error });
+          alert(
+            subida.error ||
+              'No se pudo subir la foto de la factura. Comprueba tu conexión e inténtalo de nuevo.'
+          );
           setCargando(false);
           return;
         }
         fotoFacturaPublica = subida.url;
+        logFacturaMovil('mx', 'guardar: upload terminado OK');
+      } else {
+        logFacturaMovil('mx', 'guardar: sin archivoFactura (foto_factura null)');
       }
 
       const productoNormalizado = producto.trim().toLowerCase();
@@ -665,25 +711,29 @@ export default function EntradasPage() {
           >
             <h4 style={estiloTituloSeccion}>Factura</h4>
 
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 16, position: 'relative' }}>
               <p style={{ marginBottom: 8, fontWeight: 600 }}>Foto de factura</p>
 
               <input
                 ref={refInputArchivoFactura}
                 type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
+                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/*"
+                multiple={false}
+                style={estiloInputFileOcultoMovil}
+                tabIndex={-1}
                 aria-hidden
-                onChange={aplicarArchivoFactura}
+                onChange={aplicarArchivoFacturaDesde('galeria')}
               />
               <input
                 ref={refInputCamaraFactura}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/*"
+                multiple={false}
                 capture="environment"
-                style={{ display: 'none' }}
+                style={estiloInputFileOcultoMovil}
+                tabIndex={-1}
                 aria-hidden
-                onChange={aplicarArchivoFactura}
+                onChange={aplicarArchivoFacturaDesde('camara')}
               />
 
               <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
@@ -698,7 +748,10 @@ export default function EntradasPage() {
                     minWidth: 0,
                     padding: '12px 14px',
                   }}
-                  onClick={() => refInputArchivoFactura.current?.click()}
+                  onClick={() => {
+                    logFacturaMovil('mx', 'click Subir Factura');
+                    refInputArchivoFactura.current?.click();
+                  }}
                 >
                   Subir Factura
                 </button>
@@ -714,7 +767,10 @@ export default function EntradasPage() {
                     minWidth: 0,
                     padding: '12px 14px',
                   }}
-                  onClick={() => refInputCamaraFactura.current?.click()}
+                  onClick={() => {
+                    logFacturaMovil('mx', 'click Tomar Foto');
+                    refInputCamaraFactura.current?.click();
+                  }}
                 >
                   Tomar Foto
                 </button>
