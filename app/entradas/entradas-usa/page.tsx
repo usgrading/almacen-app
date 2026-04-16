@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { canMutate, getUserRole, isViewer, type AppRole } from '@/lib/roles';
@@ -19,6 +25,7 @@ import {
   appNavLink,
   appTituloPagina,
 } from '@/lib/app-ui';
+import { subirImagenFacturaAlBucket } from '@/lib/subir-factura-storage';
 
 type EntradaResumen = {
   producto?: string | null;
@@ -64,6 +71,36 @@ export default function EntradasPage() {
   const [orgIdPerfil, setOrgIdPerfil] = useState<string | null | undefined>(
     undefined
   );
+
+  const [archivoFactura, setArchivoFactura] = useState<File | null>(null);
+  const [previewFacturaUrl, setPreviewFacturaUrl] = useState<string | null>(
+    null
+  );
+  const refInputArchivoFactura = useRef<HTMLInputElement>(null);
+  const refInputCamaraFactura = useRef<HTMLInputElement>(null);
+
+  const aplicarArchivoFactura = (e: ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const list = input.files;
+    input.value = '';
+    if (!list || list.length === 0) return;
+    const file = list[0];
+    if (!file.type.startsWith('image/')) {
+      alert('Solo se permiten archivos de imagen (JPG, PNG, etc.).');
+      return;
+    }
+    setPreviewFacturaUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+    setArchivoFactura(file);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (previewFacturaUrl) URL.revokeObjectURL(previewFacturaUrl);
+    };
+  }, [previewFacturaUrl]);
 
   const estiloInput: CSSProperties = {
     ...appInput,
@@ -242,6 +279,17 @@ export default function EntradasPage() {
         return;
       }
 
+      let fotoFacturaPublica: string | null = null;
+      if (archivoFactura) {
+        const subida = await subirImagenFacturaAlBucket(supabase, archivoFactura);
+        if ('error' in subida) {
+          alert(subida.error);
+          setCargando(false);
+          return;
+        }
+        fotoFacturaPublica = subida.url;
+      }
+
       const productoNormalizado = producto.trim().toLowerCase();
 
       const cantidadNum = convertirNumero(cantidad);
@@ -283,7 +331,7 @@ export default function EntradasPage() {
             user_id: userId,
             creado_por: userId,
             foto_pieza: null,
-            foto_factura: null,
+            foto_factura: fotoFacturaPublica,
             origen: 'USA',
           },
         ])
@@ -441,6 +489,11 @@ export default function EntradasPage() {
       setMaximo('');
       setEsPrimeraCaptura(null);
 
+      setArchivoFactura(null);
+      setPreviewFacturaUrl(null);
+      if (refInputArchivoFactura.current) refInputArchivoFactura.current.value = '';
+      if (refInputCamaraFactura.current) refInputCamaraFactura.current.value = '';
+
       alert('Entrada guardada 🔥');
       await cargarUltimaEntrada();
     } catch (error) {
@@ -584,10 +637,29 @@ export default function EntradasPage() {
             <div style={{ marginBottom: 16 }}>
               <p style={{ marginBottom: 8, fontWeight: 600 }}>Foto de factura</p>
 
+              <input
+                ref={refInputArchivoFactura}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                aria-hidden
+                onChange={aplicarArchivoFactura}
+              />
+              <input
+                ref={refInputCamaraFactura}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                aria-hidden
+                onChange={aplicarArchivoFactura}
+              />
+
               <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
                 <button
                   type="button"
                   className="app-btn-primario"
+                  disabled={!puedeRegistrar || cargando}
                   style={{
                     ...appBtnPrimario,
                     flex: 1,
@@ -595,6 +667,7 @@ export default function EntradasPage() {
                     minWidth: 0,
                     padding: '12px 14px',
                   }}
+                  onClick={() => refInputArchivoFactura.current?.click()}
                 >
                   Subir Factura
                 </button>
@@ -602,6 +675,7 @@ export default function EntradasPage() {
                 <button
                   type="button"
                   className="app-btn-primario"
+                  disabled={!puedeRegistrar || cargando}
                   style={{
                     ...appBtnPrimario,
                     flex: 1,
@@ -609,6 +683,7 @@ export default function EntradasPage() {
                     minWidth: 0,
                     padding: '12px 14px',
                   }}
+                  onClick={() => refInputCamaraFactura.current?.click()}
                 >
                   Tomar Foto
                 </button>
@@ -639,9 +714,30 @@ export default function EntradasPage() {
                   justifyContent: 'center',
                   color: '#64748B',
                   fontSize: 14,
+                  overflow: 'hidden',
+                  padding: previewFacturaUrl ? 8 : 0,
+                  boxSizing: 'border-box',
                 }}
               >
-                Sin imagen
+                {cargando && archivoFactura ? (
+                  <span style={{ textAlign: 'center', padding: '0 12px' }}>
+                    Subiendo imagen al servidor...
+                  </span>
+                ) : previewFacturaUrl ? (
+                  <img
+                    src={previewFacturaUrl}
+                    alt="Vista previa de la factura"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      width: 'auto',
+                      height: 'auto',
+                      objectFit: 'contain',
+                    }}
+                  />
+                ) : (
+                  <span>Sin imagen</span>
+                )}
               </div>
             </div>
 
