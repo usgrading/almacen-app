@@ -7,21 +7,80 @@ type Body = {
   mimeType?: string;
 };
 
-type FacturaJson = {
+export type ItemFacturaJson = {
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: string;
+  importe: string;
+};
+
+export type FacturaJson = {
   proveedor: string;
   numero_factura: string;
   fecha: string;
   total: string;
+  items: ItemFacturaJson[];
 };
 
-const PROMPT_USUARIO = `Analiza esta imagen de factura y extrae la información. Responde únicamente con JSON válido usando exactamente esta estructura:
+const PROMPT_USUARIO = `Analiza esta imagen de factura y extrae la información. Responde únicamente con JSON válido, sin texto antes ni después, usando exactamente esta estructura:
 {
   "proveedor": "",
   "numero_factura": "",
   "fecha": "",
-  "total": ""
+  "total": "",
+  "items": [
+    {
+      "descripcion": "",
+      "cantidad": 1,
+      "precio_unitario": "",
+      "importe": ""
+    }
+  ]
 }
-Si algún dato no aparece claramente, déjalo vacío.`;
+
+Reglas:
+- Si un dato no aparece claramente, déjalo vacío ("" para textos; para cantidad usa 1 solo si no hay cantidad clara por línea).
+- Si no encuentras cantidad para una línea, usa 1.
+- Si no encuentras precio_unitario o importe para una línea, déjalos como "".
+- Extrae todos los ítems o conceptos del detalle de compra (piezas, productos, servicios, refacciones).
+- Ignora firmas, sellos, notas al pie, garantías, texto decorativo o letras pequeñas que no sean líneas del detalle de productos.
+- Si solo hay un concepto, devuelve un array "items" con un solo objeto.
+- Si no hay líneas de detalle claras, devuelve "items": [].
+- Los valores de precio_unitario e importe como string (pueden incluir símbolo de moneda o no).
+- cantidad debe ser un número entero positivo.`;
+
+function str(v: unknown): string {
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  return '';
+}
+
+function parseCantidad(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v) && v > 0) {
+    return Math.max(1, Math.floor(v));
+  }
+  if (typeof v === 'string' && v.trim()) {
+    const n = parseFloat(v.replace(',', '.'));
+    if (Number.isFinite(n) && n > 0) return Math.max(1, Math.floor(n));
+  }
+  return 1;
+}
+
+function parseItems(raw: unknown): ItemFacturaJson[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ItemFacturaJson[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== 'object') continue;
+    const o = row as Record<string, unknown>;
+    out.push({
+      descripcion: str(o.descripcion).trim(),
+      cantidad: parseCantidad(o.cantidad),
+      precio_unitario: str(o.precio_unitario).trim(),
+      importe: str(o.importe).trim(),
+    });
+  }
+  return out;
+}
 
 function parseFacturaRecord(raw: Record<string, unknown>): FacturaJson {
   return {
@@ -30,6 +89,7 @@ function parseFacturaRecord(raw: Record<string, unknown>): FacturaJson {
       typeof raw.numero_factura === 'string' ? raw.numero_factura : '',
     fecha: typeof raw.fecha === 'string' ? raw.fecha : '',
     total: typeof raw.total === 'string' ? raw.total : '',
+    items: parseItems(raw.items),
   };
 }
 
@@ -98,7 +158,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 800,
+        max_tokens: 4096,
         messages: [
           {
             role: 'user',

@@ -26,7 +26,10 @@ import {
   appTituloPagina,
 } from '@/lib/app-ui';
 import { subirImagenFacturaAlBucket } from '@/lib/subir-factura-storage';
-import { solicitarAnalisisFactura } from '@/lib/analizar-factura-client';
+import {
+  solicitarAnalisisFactura,
+  type ItemFacturaAnalizado,
+} from '@/lib/analizar-factura-client';
 import { fechaTextoAInputDate, totalTextoACostoTotal } from '@/lib/factura-campos-helpers';
 import {
   estiloInputFileOcultoMovil,
@@ -86,6 +89,11 @@ export default function EntradasPage() {
   const refInputArchivoFactura = useRef<HTMLInputElement>(null);
   const refInputCamaraFactura = useRef<HTMLInputElement>(null);
   const [analizandoFactura, setAnalizandoFactura] = useState(false);
+  const [itemsFacturaAnalizados, setItemsFacturaAnalizados] = useState<
+    ItemFacturaAnalizado[]
+  >([]);
+  const [mostrarBloquePiezasDetectadas, setMostrarBloquePiezasDetectadas] =
+    useState(false);
 
   const aplicarArchivoFacturaDesde =
     (origenInput: 'galeria' | 'camara') =>
@@ -122,6 +130,8 @@ export default function EntradasPage() {
         return url;
       });
       setArchivoFactura(file);
+      setItemsFacturaAnalizados([]);
+      setMostrarBloquePiezasDetectadas(false);
       logFacturaMovil('usa', 'estado: archivoFactura actualizado');
       queueMicrotask(() => {
         input.value = '';
@@ -160,6 +170,9 @@ export default function EntradasPage() {
       if (f) setFecha(f);
       const tot = totalTextoACostoTotal(datos.total);
       if (tot) setCostoTotal(tot);
+      setItemsFacturaAnalizados(datos.items ?? []);
+      setMostrarBloquePiezasDetectadas(true);
+      console.log('[Entradas USA] Items detectados en factura:', datos.items);
     } catch {
       alert('No se pudo analizar la factura');
     } finally {
@@ -568,6 +581,8 @@ export default function EntradasPage() {
 
       setArchivoFactura(null);
       setPreviewFacturaUrl(null);
+      setItemsFacturaAnalizados([]);
+      setMostrarBloquePiezasDetectadas(false);
       if (refInputArchivoFactura.current) refInputArchivoFactura.current.value = '';
       if (refInputCamaraFactura.current) refInputCamaraFactura.current.value = '';
 
@@ -828,6 +843,70 @@ export default function EntradasPage() {
                   <span>Sin imagen</span>
                 )}
               </div>
+
+              {mostrarBloquePiezasDetectadas ? (
+                <div
+                  style={{
+                    marginTop: 14,
+                    paddingTop: 12,
+                    borderTop: '1px solid #e2e8f0',
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: '0 0 10px 0',
+                      fontWeight: 700,
+                      fontSize: 15,
+                      color: '#0f172a',
+                    }}
+                  >
+                    Piezas detectadas
+                  </p>
+                  {itemsFacturaAnalizados.length === 0 ? (
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 13,
+                        color: '#64748b',
+                      }}
+                    >
+                      No se detectaron conceptos en el detalle de la factura.
+                    </p>
+                  ) : (
+                    <ul
+                      style={{
+                        listStyle: 'none',
+                        margin: 0,
+                        padding: 0,
+                      }}
+                    >
+                      {itemsFacturaAnalizados.map((item, idx) => (
+                        <li
+                          key={`${idx}-${item.descripcion.slice(0, 20)}`}
+                          style={{
+                            borderBottom: '1px solid #e2e8f0',
+                            paddingBottom: 10,
+                            marginBottom: 10,
+                            fontSize: 13,
+                            color: '#334155',
+                          }}
+                        >
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                            {item.descripcion || '(Sin descripción)'}
+                          </div>
+                          <div style={{ color: '#64748b', lineHeight: 1.45 }}>
+                            Cantidad: {item.cantidad}
+                            {item.precio_unitario
+                              ? ` · P. unit.: ${item.precio_unitario}`
+                              : ''}
+                            {item.importe ? ` · Importe: ${item.importe}` : ''}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
             </div>
 
             <CampoFormulario etiqueta="Supplier" htmlFor="entrada-usa-proveedor">
