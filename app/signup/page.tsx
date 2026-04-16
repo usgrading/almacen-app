@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CampoFormulario } from '@/components/CampoFormulario';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +14,19 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sesionVerificada, setSesionVerificada] = useState(false);
+
+  useEffect(() => {
+    const verificarSesion = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.replace('/dashboard');
+        return;
+      }
+      setSesionVerificada(true);
+    };
+    void verificarSesion();
+  }, [router]);
 
   const handleRegister = async () => {
     if (loading) return;
@@ -76,6 +89,23 @@ export default function SignupPage() {
       setLoading(false);
     }
   };
+
+  if (!sesionVerificada) {
+    return (
+      <main
+        style={{
+          minHeight: '100vh',
+          background: '#f5f7fb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20,
+        }}
+      >
+        <p style={{ margin: 0, color: '#64748B', fontSize: 15 }}>Cargando...</p>
+      </main>
+    );
+  }
 
   return (
     <main
