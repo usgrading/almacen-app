@@ -19,6 +19,7 @@ import { ConfirmarEliminarModal } from '@/components/ConfirmarEliminarModal';
 import { useReporteRolAdmin } from '@/hooks/useReporteRolAdmin';
 import { useSeleccionFilas } from '@/hooks/useSeleccionFilas';
 import { getUserRole, isAdmin } from '@/lib/roles';
+import { CampoFormulario } from '@/components/CampoFormulario';
 
 type InventarioItem = {
   id: string | number;
@@ -38,6 +39,20 @@ const subtituloAlerta = (
     y se guardaron en inventario.
   </>
 );
+
+const reporteThCheckboxSel: CSSProperties = {
+  ...reporteThCheckbox,
+  width: 100,
+  maxWidth: 100,
+  verticalAlign: 'top',
+};
+
+const reporteTdCheckboxSel: CSSProperties = {
+  ...reporteTdCheckbox,
+  width: 100,
+  maxWidth: 100,
+  verticalAlign: 'top',
+};
 
 const btnEliminar: CSSProperties = {
   padding: '10px 16px',
@@ -200,17 +215,31 @@ export default function ReporteAlertaInventarioPage() {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                minWidth: 800 + (mostrarSeleccion ? 56 : 0),
+              }}
+            >
               <thead>
                 <tr style={reporteTheadRow}>
                   {mostrarSeleccion ? (
-                    <th style={reporteThCheckbox}>
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        onChange={toggleAll}
-                        aria-label="Seleccionar todas las filas"
-                      />
+                    <th style={reporteThCheckboxSel}>
+                      <CampoFormulario
+                        etiqueta="Seleccionar todos"
+                        htmlFor="rep-alerta-sel-todos"
+                        margenInferior={2}
+                        tamanoEtiqueta={11}
+                      >
+                        <input
+                          id="rep-alerta-sel-todos"
+                          type="checkbox"
+                          checked={allSelected}
+                          onChange={toggleAll}
+                          aria-label="Seleccionar todas las filas"
+                        />
+                      </CampoFormulario>
                     </th>
                   ) : null}
                   <th style={reporteTh}>Producto</th>
@@ -231,13 +260,21 @@ export default function ReporteAlertaInventarioPage() {
                     }}
                   >
                     {mostrarSeleccion ? (
-                      <td style={reporteTdCheckbox}>
-                        <input
-                          type="checkbox"
-                          checked={selected.has(String(item.id))}
-                          onChange={() => toggle(item.id)}
-                          aria-label={`Seleccionar ${item.producto || 'fila'}`}
-                        />
+                      <td style={reporteTdCheckboxSel}>
+                        <CampoFormulario
+                          etiqueta="Elegir"
+                          htmlFor={`rep-alerta-tab-${String(item.id)}`}
+                          margenInferior={0}
+                          tamanoEtiqueta={10}
+                        >
+                          <input
+                            id={`rep-alerta-tab-${String(item.id)}`}
+                            type="checkbox"
+                            checked={selected.has(String(item.id))}
+                            onChange={() => toggle(item.id)}
+                            aria-label={`Seleccionar ${item.producto || 'fila'}`}
+                          />
+                        </CampoFormulario>
                       </td>
                     ) : null}
                     <td style={reporteTd}>{item.producto || '—'}</td>

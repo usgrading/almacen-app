@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { CampoFormulario } from '@/components/CampoFormulario';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -109,78 +110,98 @@ export default function SignupPage() {
           Registra un nuevo usuario
         </p>
 
-        <input
-          placeholder="Nombre"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{
-            width: '100%',
-            padding: 14,
-            marginBottom: 10,
-            borderRadius: 10,
-            border: '1px solid #ccc',
-          }}
-        />
-
-        <input
-          placeholder="Correo"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{
-            width: '100%',
-            padding: 14,
-            marginBottom: 10,
-            borderRadius: 10,
-            border: '1px solid #ccc',
-          }}
-        />
-
-        <div style={{ position: 'relative', marginBottom: 10 }}>
+        <CampoFormulario etiqueta="Nombre" htmlFor="signup-nombre" margenInferior={10}>
           <input
-            placeholder="Contraseña"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            id="signup-nombre"
+            autoComplete="name"
+            placeholder="Nombre completo"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             style={{
               width: '100%',
-              padding: '14px 72px 14px 14px',
+              padding: 14,
+              marginBottom: 0,
               borderRadius: 10,
               border: '1px solid #ccc',
+              boxSizing: 'border-box',
             }}
           />
+        </CampoFormulario>
 
-          <span
-            onClick={() => setShowPassword(!showPassword)}
+        <CampoFormulario etiqueta="Correo" htmlFor="signup-email" margenInferior={10}>
+          <input
+            id="signup-email"
+            placeholder="nombre@ejemplo.com"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             style={{
-              position: 'absolute',
-              right: 12,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 500,
-              color: '#0d47a1',
-              userSelect: 'none',
+              width: '100%',
+              padding: 14,
+              marginBottom: 0,
+              borderRadius: 10,
+              border: '1px solid #ccc',
+              boxSizing: 'border-box',
             }}
-          >
-            {showPassword ? 'Ocultar' : 'Ver'}
-          </span>
-        </div>
+          />
+        </CampoFormulario>
 
-        <input
-          placeholder="Confirmar contraseña"
-          type={showPassword ? 'text' : 'password'}
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          style={{
-            width: '100%',
-            padding: 14,
-            marginBottom: 16,
-            borderRadius: 10,
-            border: '1px solid #ccc',
-          }}
-        />
+        <CampoFormulario etiqueta="Contraseña" htmlFor="signup-password" margenInferior={10}>
+          <div style={{ position: 'relative' }}>
+            <input
+              id="signup-password"
+              placeholder="Mínimo 6 caracteres"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '14px 72px 14px 14px',
+                borderRadius: 10,
+                border: '1px solid #ccc',
+                boxSizing: 'border-box',
+              }}
+            />
+
+            <span
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                color: '#0d47a1',
+                userSelect: 'none',
+              }}
+            >
+              {showPassword ? 'Ocultar' : 'Ver'}
+            </span>
+          </div>
+        </CampoFormulario>
+
+        <CampoFormulario etiqueta="Confirmar contraseña" htmlFor="signup-confirm" margenInferior={16}>
+          <input
+            id="signup-confirm"
+            placeholder="Repite la contraseña"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            style={{
+              width: '100%',
+              padding: 14,
+              marginBottom: 0,
+              borderRadius: 10,
+              border: '1px solid #ccc',
+              boxSizing: 'border-box',
+            }}
+          />
+        </CampoFormulario>
 
         <button
           onClick={handleRegister}

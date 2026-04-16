@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { CampoFormulario } from '@/components/CampoFormulario';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -89,50 +90,61 @@ export default function LoginPage() {
           Inicia sesión para continuar
         </p>
 
-        <input
-          placeholder="Correo"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{
-            width: '100%',
-            padding: 14,
-            marginBottom: 10,
-            borderRadius: 10,
-            border: '1px solid #ccc',
-          }}
-        />
-
-        <div style={{ position: 'relative', marginBottom: 16 }}>
+        <CampoFormulario etiqueta="Correo" htmlFor="login-email" margenInferior={10}>
           <input
-            placeholder="Contraseña"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            placeholder="nombre@ejemplo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             style={{
               width: '100%',
-              padding: '14px 56px 14px 14px',
+              padding: 14,
+              marginBottom: 0,
               borderRadius: 10,
               border: '1px solid #ccc',
+              boxSizing: 'border-box',
             }}
           />
+        </CampoFormulario>
 
-          <span
-            onClick={() => setShowPassword(!showPassword)}
-            style={{
-              position: 'absolute',
-              right: 12,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 500,
-              color: '#0d47a1',
-              userSelect: 'none',
-            }}
-          >
-            {showPassword ? 'Ocultar' : 'Ver'}
-          </span>
-        </div>
+        <CampoFormulario etiqueta="Contraseña" htmlFor="login-password" margenInferior={16}>
+          <div style={{ position: 'relative' }}>
+            <input
+              id="login-password"
+              placeholder="Tu contraseña"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '14px 56px 14px 14px',
+                borderRadius: 10,
+                border: '1px solid #ccc',
+                boxSizing: 'border-box',
+              }}
+            />
+
+            <span
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                color: '#0d47a1',
+                userSelect: 'none',
+              }}
+            >
+              {showPassword ? 'Ocultar' : 'Ver'}
+            </span>
+          </div>
+        </CampoFormulario>
 
         <button
           onClick={handleLogin}

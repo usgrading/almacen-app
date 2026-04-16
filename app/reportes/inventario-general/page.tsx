@@ -13,6 +13,7 @@ import { ConfirmarEliminarModal } from '@/components/ConfirmarEliminarModal';
 import { useReporteRolAdmin } from '@/hooks/useReporteRolAdmin';
 import { useSeleccionFilas } from '@/hooks/useSeleccionFilas';
 import { getUserRole, isAdmin } from '@/lib/roles';
+import { CampoFormulario } from '@/components/CampoFormulario';
 
 type FiltroOrigen = 'TODOS' | 'MX' | 'USA';
 
@@ -349,12 +350,15 @@ export default function InventarioPage() {
           </button>
         </div>
 
-        <input
-          placeholder="Buscar producto, ubicación, unidad u origen..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          style={inputStyle}
-        />
+        <CampoFormulario etiqueta="Buscar" htmlFor="rep-inv-gen-busqueda">
+          <input
+            id="rep-inv-gen-busqueda"
+            placeholder="Producto, ubicación, unidad u origen"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            style={inputStyleCampo}
+          />
+        </CampoFormulario>
 
         <div
           style={{
@@ -398,13 +402,21 @@ export default function InventarioPage() {
                     }}
                   >
                     {mostrarSeleccion ? (
-                      <input
-                        type="checkbox"
-                        checked={selected.has(String(item.id))}
-                        onChange={() => toggle(item.id)}
-                        aria-label={`Seleccionar ${item.producto || 'fila'}`}
-                        style={{ flexShrink: 0 }}
-                      />
+                      <CampoFormulario
+                        etiqueta="Seleccionar"
+                        htmlFor={`rep-inv-gen-mob-${String(item.id)}`}
+                        margenInferior={0}
+                        tamanoEtiqueta={11}
+                      >
+                        <input
+                          id={`rep-inv-gen-mob-${String(item.id)}`}
+                          type="checkbox"
+                          checked={selected.has(String(item.id))}
+                          onChange={() => toggle(item.id)}
+                          aria-label={`Seleccionar ${item.producto || 'fila'}`}
+                          style={{ flexShrink: 0 }}
+                        />
+                      </CampoFormulario>
                     ) : null}
                     <div
                       style={{
@@ -458,19 +470,27 @@ export default function InventarioPage() {
                   width: '100%',
                   borderCollapse: 'collapse',
                   minWidth:
-                    (esAdmin ? 920 : 760) + (mostrarSeleccion ? 44 : 0),
+                    (esAdmin ? 920 : 760) + (mostrarSeleccion ? 100 : 0),
                 }}
               >
                 <thead>
                   <tr style={{ background: '#E2E8F0' }}>
                     {mostrarSeleccion ? (
-                      <th style={reporteThCheckbox}>
-                        <input
-                          type="checkbox"
-                          checked={allSelected}
-                          onChange={toggleAll}
-                          aria-label="Seleccionar todas las filas"
-                        />
+                      <th style={reporteThCheckboxSel}>
+                        <CampoFormulario
+                          etiqueta="Seleccionar todos"
+                          htmlFor="rep-inv-gen-sel-todos"
+                          margenInferior={2}
+                          tamanoEtiqueta={11}
+                        >
+                          <input
+                            id="rep-inv-gen-sel-todos"
+                            type="checkbox"
+                            checked={allSelected}
+                            onChange={toggleAll}
+                            aria-label="Seleccionar todas las filas"
+                          />
+                        </CampoFormulario>
                       </th>
                     ) : null}
                     <th style={headerStyle}>Producto</th>
@@ -491,13 +511,21 @@ export default function InventarioPage() {
                       }}
                     >
                       {mostrarSeleccion ? (
-                        <td style={reporteTdCheckbox}>
-                          <input
-                            type="checkbox"
-                            checked={selected.has(String(item.id))}
-                            onChange={() => toggle(item.id)}
-                            aria-label={`Seleccionar ${item.producto || 'fila'}`}
-                          />
+                        <td style={reporteTdCheckboxSel}>
+                          <CampoFormulario
+                            etiqueta="Elegir"
+                            htmlFor={`rep-inv-gen-tab-${String(item.id)}`}
+                            margenInferior={0}
+                            tamanoEtiqueta={10}
+                          >
+                            <input
+                              id={`rep-inv-gen-tab-${String(item.id)}`}
+                              type="checkbox"
+                              checked={selected.has(String(item.id))}
+                              onChange={() => toggle(item.id)}
+                              aria-label={`Seleccionar ${item.producto || 'fila'}`}
+                            />
+                          </CampoFormulario>
                         </td>
                       ) : null}
                       <td style={cellStyle}>{item.producto || '—'}</td>
@@ -632,6 +660,25 @@ const inputStyle: React.CSSProperties = {
   fontSize: 15,
   outline: 'none',
   boxSizing: 'border-box',
+};
+
+const inputStyleCampo: React.CSSProperties = {
+  ...inputStyle,
+  marginBottom: 0,
+};
+
+const reporteThCheckboxSel: React.CSSProperties = {
+  ...reporteThCheckbox,
+  width: 100,
+  maxWidth: 100,
+  verticalAlign: 'top',
+};
+
+const reporteTdCheckboxSel: React.CSSProperties = {
+  ...reporteTdCheckbox,
+  width: 100,
+  maxWidth: 100,
+  verticalAlign: 'top',
 };
 
 const resumenCardStyle: React.CSSProperties = {

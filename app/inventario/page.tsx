@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { canMutate, getUserRole, isViewer, type AppRole } from '@/lib/roles';
+import { CampoFormulario } from '@/components/CampoFormulario';
 
 type FiltroOrigen = 'TODOS' | 'MX' | 'USA';
 
@@ -319,12 +320,15 @@ export default function InventarioPage() {
           </button>
         </div>
 
-        <input
-          placeholder="Buscar producto, ubicación, unidad u origen..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          style={inputStyle}
-        />
+        <CampoFormulario etiqueta="Buscar" htmlFor="inventario-busqueda">
+          <input
+            id="inventario-busqueda"
+            placeholder="Producto, ubicación, unidad u origen"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            style={inputStyleCampo}
+          />
+        </CampoFormulario>
 
         <div
           style={{
@@ -573,6 +577,11 @@ const inputStyle: React.CSSProperties = {
   fontSize: 15,
   outline: 'none',
   boxSizing: 'border-box',
+};
+
+const inputStyleCampo: React.CSSProperties = {
+  ...inputStyle,
+  marginBottom: 0,
 };
 
 const resumenCardStyle: React.CSSProperties = {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { CampoFormulario } from '@/components/CampoFormulario';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -58,48 +59,59 @@ export default function Home() {
 </p>
 
 
-        <input
-          placeholder="Correo"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{
-            width: '100%',
-            padding: 14,
-            marginBottom: 10,
-            borderRadius: 10,
-            border: '1px solid #ccc',
-          }}
-        />
+        <CampoFormulario etiqueta="Correo" htmlFor="home-email" margenInferior={10}>
+          <input
+            id="home-email"
+            type="email"
+            autoComplete="email"
+            placeholder="nombre@ejemplo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{
+              width: '100%',
+              padding: 14,
+              marginBottom: 0,
+              borderRadius: 10,
+              border: '1px solid #ccc',
+              boxSizing: 'border-box',
+            }}
+          />
+        </CampoFormulario>
 
-        <div style={{ position: 'relative', marginBottom: 16 }}>
-  <input
-    placeholder="Contraseña"
-    type={showPassword ? 'text' : 'password'}
-    value={password}
-    onChange={(e) => setPassword(e.target.value)}
-    style={{
-      width: '100%',
-      padding: 14,
-      borderRadius: 10,
-      border: '1px solid #ccc',
-    }}
-  />
+        <CampoFormulario etiqueta="Contraseña" htmlFor="home-password" margenInferior={16}>
+          <div style={{ position: 'relative' }}>
+            <input
+              id="home-password"
+              placeholder="Tu contraseña"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '14px 48px 14px 14px',
+                borderRadius: 10,
+                border: '1px solid #ccc',
+                boxSizing: 'border-box',
+              }}
+            />
 
-  <span
-    onClick={() => setShowPassword(!showPassword)}
-    style={{
-      position: 'absolute',
-      right: 12,
-      top: '50%',
-      transform: 'translateY(-50%)',     
-      cursor: 'pointer',
-      fontSize: 12,
-      color: '#0d47a1',
-    }}
-  >
-    {showPassword ? 'Ocultar' : 'Ver'}
-  </span>
-</div>
+            <span
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                cursor: 'pointer',
+                fontSize: 12,
+                color: '#0d47a1',
+              }}
+            >
+              {showPassword ? 'Ocultar' : 'Ver'}
+            </span>
+          </div>
+        </CampoFormulario>
 
         <button
           onClick={handleLogin}

@@ -6,6 +6,7 @@ import { PageLogo } from "@/components/PageLogo";
 import { supabase } from "@/lib/supabase";
 import { ensureMiOrganizationId, getMiOrganizationId } from "@/lib/organization";
 import { getUserRole, isAdmin } from "@/lib/roles";
+import { CampoFormulario } from "@/components/CampoFormulario";
 
 type Rol = "admin" | "manager" | "viewer";
 
@@ -321,52 +322,69 @@ export default function UsuariosPage() {
           <h2 style={styles.sectionTitle}>Crear nuevo usuario</h2>
 
           <div style={styles.formGrid}>
-            <input
-              style={styles.input}
-              type="text"
-              placeholder="Nombre"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-            />
+            <CampoFormulario etiqueta="Nombre" htmlFor="usuario-nombre">
+              <input
+                id="usuario-nombre"
+                style={{ ...styles.input, marginBottom: 0 }}
+                type="text"
+                placeholder="Nombre visible"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+              />
+            </CampoFormulario>
 
-            <input
-              style={styles.input}
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <CampoFormulario etiqueta="Correo" htmlFor="usuario-email">
+              <input
+                id="usuario-email"
+                style={{ ...styles.input, marginBottom: 0 }}
+                type="email"
+                placeholder="correo@empresa.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </CampoFormulario>
 
-            <input
-              style={styles.input}
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
+            <CampoFormulario etiqueta="Usuario (login)" htmlFor="usuario-username">
+              <input
+                id="usuario-username"
+                style={{ ...styles.input, marginBottom: 0 }}
+                type="text"
+                placeholder="Identificador de acceso"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </CampoFormulario>
 
-            <input
-              style={styles.input}
-              type="password"
-              placeholder="Password (mínimo 6 caracteres)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <CampoFormulario etiqueta="Contraseña" htmlFor="usuario-password">
+              <input
+                id="usuario-password"
+                style={{ ...styles.input, marginBottom: 0 }}
+                type="password"
+                autoComplete="new-password"
+                placeholder="Mínimo 6 caracteres"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </CampoFormulario>
 
-            <select
-              style={{
-                ...styles.input,
-                backgroundColor: esPrimerUsuario ? "#eef2ff" : "#ffffff",
-                fontWeight: esPrimerUsuario ? 700 : 400,
-              }}
-              value={rolMostrado}
-              onChange={(e) => setRol(e.target.value as Rol)}
-              disabled={esPrimerUsuario}
-            >
-              <option value="admin">admin</option>
-              <option value="manager">manager</option>
-              <option value="viewer">viewer</option>
-            </select>
+            <CampoFormulario etiqueta="Rol" htmlFor="usuario-rol">
+              <select
+                id="usuario-rol"
+                style={{
+                  ...styles.input,
+                  marginBottom: 0,
+                  backgroundColor: esPrimerUsuario ? "#eef2ff" : "#ffffff",
+                  fontWeight: esPrimerUsuario ? 700 : 400,
+                }}
+                value={rolMostrado}
+                onChange={(e) => setRol(e.target.value as Rol)}
+                disabled={esPrimerUsuario}
+              >
+                <option value="admin">admin</option>
+                <option value="manager">manager</option>
+                <option value="viewer">viewer</option>
+              </select>
+            </CampoFormulario>
           </div>
 
           {esPrimerUsuario && (

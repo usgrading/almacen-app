@@ -9,6 +9,7 @@ import {
   obtenerOrganizacionParaEntrada,
 } from '@/lib/entrada-inventario';
 import { formatoDosDecimales } from '@/lib/format-money';
+import { CampoFormulario } from '@/components/CampoFormulario';
 
 type EntradaResumen = {
   producto?: string | null;
@@ -66,6 +67,11 @@ export default function EntradasPage() {
     fontSize: 15,
     outline: 'none',
     boxSizing: 'border-box',
+  };
+
+  const estiloInputCampo: React.CSSProperties = {
+    ...estiloInput,
+    marginBottom: 0,
   };
 
   const estiloTituloSeccion: React.CSSProperties = {
@@ -601,26 +607,35 @@ export default function EntradasPage() {
               </div>
             </div>
 
-            <input
-              placeholder="Proveedor"
-              value={proveedor}
-              onChange={(e) => setProveedor(e.target.value)}
-              style={estiloInput}
-            />
+            <CampoFormulario etiqueta="Supplier" htmlFor="entrada-usa-proveedor">
+              <input
+                id="entrada-usa-proveedor"
+                placeholder="e.g. vendor name"
+                value={proveedor}
+                onChange={(e) => setProveedor(e.target.value)}
+                style={estiloInputCampo}
+              />
+            </CampoFormulario>
 
-            <input
-              placeholder="Número de factura"
-              value={numeroFactura}
-              onChange={(e) => setNumeroFactura(e.target.value)}
-              style={estiloInput}
-            />
+            <CampoFormulario etiqueta="Invoice number" htmlFor="entrada-usa-factura">
+              <input
+                id="entrada-usa-factura"
+                placeholder="e.g. INV-1024"
+                value={numeroFactura}
+                onChange={(e) => setNumeroFactura(e.target.value)}
+                style={estiloInputCampo}
+              />
+            </CampoFormulario>
 
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              style={estiloInput}
-            />
+            <CampoFormulario etiqueta="Date" htmlFor="entrada-usa-fecha">
+              <input
+                id="entrada-usa-fecha"
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                style={estiloInputCampo}
+              />
+            </CampoFormulario>
           </div>
 
           <div
@@ -632,18 +647,24 @@ export default function EntradasPage() {
           >
             <h4 style={estiloTituloSeccion}>Producto</h4>
 
-            <input
-              placeholder="Foto de pieza"
-              disabled
-              style={estiloInputDeshabilitado}
-            />
+            <CampoFormulario etiqueta="Part photo" htmlFor="entrada-usa-foto-pieza">
+              <input
+                id="entrada-usa-foto-pieza"
+                placeholder="Coming soon"
+                disabled
+                style={{ ...estiloInputDeshabilitado, marginBottom: 0 }}
+              />
+            </CampoFormulario>
 
-            <input
-              placeholder="Nombre de pieza"
-              value={producto}
-              onChange={(e) => setProducto(e.target.value)}
-              style={estiloInput}
-            />
+            <CampoFormulario etiqueta="Part name" htmlFor="entrada-usa-producto">
+              <input
+                id="entrada-usa-producto"
+                placeholder="e.g. screw 1/2"
+                value={producto}
+                onChange={(e) => setProducto(e.target.value)}
+                style={estiloInputCampo}
+              />
+            </CampoFormulario>
 
             {validandoPrimeraCaptura && (
               <p
@@ -672,122 +693,146 @@ export default function EntradasPage() {
                   Primera captura: define stock mínimo y máximo
                 </p>
 
-                <select
-                  value={minimo}
-                  onChange={(e) => setMinimo(e.target.value)}
-                  style={estiloInput}
-                >
-                  <option value="">Mínimo</option>
-                  {Array.from({ length: 200 }, (_, i) => i + 1).map((n) => (
-                    <option key={`min-${n}`} value={String(n)}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
+                <CampoFormulario etiqueta="Minimum stock" htmlFor="entrada-usa-minimo">
+                  <select
+                    id="entrada-usa-minimo"
+                    value={minimo}
+                    onChange={(e) => setMinimo(e.target.value)}
+                    style={estiloInputCampo}
+                  >
+                    <option value="">Select</option>
+                    {Array.from({ length: 200 }, (_, i) => i + 1).map((n) => (
+                      <option key={`min-${n}`} value={String(n)}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </CampoFormulario>
 
-                <select
-                  value={maximo}
-                  onChange={(e) => setMaximo(e.target.value)}
-                  style={estiloInput}
-                >
-                  <option value="">Máximo</option>
-                  {Array.from({ length: 200 }, (_, i) => i + 1).map((n) => (
-                    <option key={`max-${n}`} value={String(n)}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
+                <CampoFormulario etiqueta="Maximum stock" htmlFor="entrada-usa-maximo">
+                  <select
+                    id="entrada-usa-maximo"
+                    value={maximo}
+                    onChange={(e) => setMaximo(e.target.value)}
+                    style={estiloInputCampo}
+                  >
+                    <option value="">Select</option>
+                    {Array.from({ length: 200 }, (_, i) => i + 1).map((n) => (
+                      <option key={`max-${n}`} value={String(n)}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </CampoFormulario>
               </>
             )}
 
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="Cantidad"
-              value={cantidad}
-              onChange={(e) =>
-                setCantidad(e.target.value.replace(/[^0-9]/g, ''))
-              }
-              style={estiloInput}
-            />
-
-            <select
-              value={unidad}
-              onChange={(e) => setUnidad(e.target.value)}
-              style={estiloInput}
-            >
-              <option value="" disabled>
-                Unidad
-              </option>
-              <option value="Pieza">Pieza</option>
-              <option value="Caja">Caja</option>
-              <option value="Litros">Litros</option>
-              <option value="Galones">Galones</option>
-              <option value="Kilos">Kilos</option>
-              <option value="Metros">Metros</option>
-              <option value="Paquete">Paquete</option>
-            </select>
-
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="$ Cost per unit"
-              value={costoUnitario}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === '') {
-                  setCostoUnitario('');
-                  return;
+            <CampoFormulario etiqueta="Quantity" htmlFor="entrada-usa-cantidad">
+              <input
+                id="entrada-usa-cantidad"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 10"
+                value={cantidad}
+                onChange={(e) =>
+                  setCantidad(e.target.value.replace(/[^0-9]/g, ''))
                 }
-                setCostoUnitario(v);
-              }}
-              style={estiloInput}
-            />
+                style={estiloInputCampo}
+              />
+            </CampoFormulario>
 
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="$ Total cost"
-              value={costoTotal}
-              readOnly
-              tabIndex={-1}
-              aria-readonly="true"
-              style={{
-                ...estiloInput,
-                background: '#F1F5F9',
-                color: '#475569',
-              }}
-            />
-            <select
-              value={ubicacion}
-              onChange={(e) => setUbicacion(e.target.value)}
-              style={estiloInput}
-            >
-              <option value="">Ubicación</option>
-              {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map((seccion) =>
-                [1, 2, 3, 4].map((nivel) => {
-                  const valor = `${seccion}-${nivel}`;
-                  return (
-                    <option key={valor} value={valor}>
-                      {valor}
-                    </option>
-                  );
-                })
-              )}
-            </select>
+            <CampoFormulario etiqueta="Unit" htmlFor="entrada-usa-unidad">
+              <select
+                id="entrada-usa-unidad"
+                value={unidad}
+                onChange={(e) => setUnidad(e.target.value)}
+                style={estiloInputCampo}
+              >
+                <option value="" disabled>
+                  Select unit
+                </option>
+                <option value="Pieza">Pieza</option>
+                <option value="Caja">Caja</option>
+                <option value="Litros">Litros</option>
+                <option value="Galones">Galones</option>
+                <option value="Kilos">Kilos</option>
+                <option value="Metros">Metros</option>
+                <option value="Paquete">Paquete</option>
+              </select>
+            </CampoFormulario>
 
-            <textarea
-              placeholder="Notas"
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              style={{
-                ...estiloInput,
-                height: 90,
-                resize: 'vertical',
-              }}
-            />
+            <CampoFormulario etiqueta="Unit cost" htmlFor="entrada-usa-costo-unit">
+              <input
+                id="entrada-usa-costo-unit"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="e.g. 25.50"
+                value={costoUnitario}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '') {
+                    setCostoUnitario('');
+                    return;
+                  }
+                  setCostoUnitario(v);
+                }}
+                style={estiloInputCampo}
+              />
+            </CampoFormulario>
+
+            <CampoFormulario etiqueta="Total cost" htmlFor="entrada-usa-costo-total">
+              <input
+                id="entrada-usa-costo-total"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Calculated automatically"
+                value={costoTotal}
+                readOnly
+                tabIndex={-1}
+                aria-readonly="true"
+                style={{
+                  ...estiloInputCampo,
+                  background: '#F1F5F9',
+                  color: '#475569',
+                }}
+              />
+            </CampoFormulario>
+            <CampoFormulario etiqueta="Location" htmlFor="entrada-usa-ubicacion">
+              <select
+                id="entrada-usa-ubicacion"
+                value={ubicacion}
+                onChange={(e) => setUbicacion(e.target.value)}
+                style={estiloInputCampo}
+              >
+                <option value="">Select location</option>
+                {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map((seccion) =>
+                  [1, 2, 3, 4].map((nivel) => {
+                    const valor = `${seccion}-${nivel}`;
+                    return (
+                      <option key={valor} value={valor}>
+                        {valor}
+                      </option>
+                    );
+                  })
+                )}
+              </select>
+            </CampoFormulario>
+
+            <CampoFormulario etiqueta="Notes" htmlFor="entrada-usa-notas">
+              <textarea
+                id="entrada-usa-notas"
+                placeholder="Optional notes"
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                style={{
+                  ...estiloInputCampo,
+                  height: 90,
+                  resize: 'vertical',
+                }}
+              />
+            </CampoFormulario>
           </div>
 
           <button

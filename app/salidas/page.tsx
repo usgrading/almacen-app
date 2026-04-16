@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { ensureMiOrganizationId, getMiOrganizationId } from '@/lib/organization';
 import { canMutate, getUserRole, isViewer, type AppRole } from '@/lib/roles';
+import { CampoFormulario } from '@/components/CampoFormulario';
 
 type Salida = {
   id: string | number;
@@ -292,44 +293,47 @@ export default function SalidasPage() {
             </p>
           )}
 
-          <input
-            placeholder="Foto pieza (opcional)"
-            value={fotoPieza}
-            onChange={(e) => setFotoPieza(e.target.value)}
-            style={inputStyle}
-          />
-
-          <div
-            style={{
-              position: 'relative',
-              marginBottom: 12,
-            }}
-          >
+          <CampoFormulario etiqueta="Foto de pieza (opcional)" htmlFor="salidas-foto">
             <input
-              placeholder="Producto"
-              value={producto}
-              onChange={(e) => {
-                const valor = e.target.value;
-                setProducto(valor);
-                setOrigen('');
-
-                if (!valor.trim()) {
-                  setResultadosBusqueda([]);
-                  return;
-                }
-
-                const filtrados = productosInventario.filter((item) =>
-                  item.producto.toLowerCase().includes(valor.toLowerCase())
-                );
-
-                setResultadosBusqueda(filtrados.slice(0, 8));
-              }}
-              style={{
-                ...inputStyle,
-                marginBottom: 0,
-                paddingRight: 44,
-              }}
+              id="salidas-foto"
+              placeholder="URL o referencia"
+              value={fotoPieza}
+              onChange={(e) => setFotoPieza(e.target.value)}
+              style={inputStyleCampo}
             />
+          </CampoFormulario>
+
+          <CampoFormulario etiqueta="Producto" htmlFor="salidas-producto">
+            <div
+              style={{
+                position: 'relative',
+              }}
+            >
+              <input
+                id="salidas-producto"
+                placeholder="Buscar en inventario"
+                value={producto}
+                onChange={(e) => {
+                  const valor = e.target.value;
+                  setProducto(valor);
+                  setOrigen('');
+
+                  if (!valor.trim()) {
+                    setResultadosBusqueda([]);
+                    return;
+                  }
+
+                  const filtrados = productosInventario.filter((item) =>
+                    item.producto.toLowerCase().includes(valor.toLowerCase())
+                  );
+
+                  setResultadosBusqueda(filtrados.slice(0, 8));
+                }}
+                style={{
+                  ...inputStyleCampo,
+                  paddingRight: 44,
+                }}
+              />
 
             {origen && (
               <div
@@ -350,7 +354,8 @@ export default function SalidasPage() {
                 ) : null}
               </div>
             )}
-          </div>
+            </div>
+          </CampoFormulario>
 
           {resultadosBusqueda.length > 0 && (
             <div
@@ -432,50 +437,67 @@ export default function SalidasPage() {
             </div>
           )}
 
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="Cantidad"
-            value={cantidad}
-            onChange={(e) => setCantidad(e.target.value.replace(/[^0-9]/g, ''))}
-            style={inputStyle}
-          />
+          <CampoFormulario etiqueta="Cantidad" htmlFor="salidas-cantidad">
+            <input
+              id="salidas-cantidad"
+              type="text"
+              inputMode="numeric"
+              placeholder="Ej. 5"
+              value={cantidad}
+              onChange={(e) =>
+                setCantidad(e.target.value.replace(/[^0-9]/g, ''))
+              }
+              style={inputStyleCampo}
+            />
+          </CampoFormulario>
 
-          <select
-            value={unidad}
-            onChange={(e) => setUnidad(e.target.value)}
-            style={inputStyle}
-          >
-            <option value="">Unidad</option>
-            <option value="Pieza">Pieza</option>
-            <option value="Caja">Caja</option>
-            <option value="Litros">Litros</option>
-            <option value="Galones">Galones</option>
-            <option value="Kilos">Kilos</option>
-            <option value="Metros">Metros</option>
-            <option value="Paquete">Paquete</option>
-          </select>
+          <CampoFormulario etiqueta="Unidad" htmlFor="salidas-unidad">
+            <select
+              id="salidas-unidad"
+              value={unidad}
+              onChange={(e) => setUnidad(e.target.value)}
+              style={inputStyleCampo}
+            >
+              <option value="">Selecciona unidad</option>
+              <option value="Pieza">Pieza</option>
+              <option value="Caja">Caja</option>
+              <option value="Litros">Litros</option>
+              <option value="Galones">Galones</option>
+              <option value="Kilos">Kilos</option>
+              <option value="Metros">Metros</option>
+              <option value="Paquete">Paquete</option>
+            </select>
+          </CampoFormulario>
 
-          <input
-            placeholder="Destino"
-            value={destino}
-            onChange={(e) => setDestino(e.target.value)}
-            style={inputStyle}
-          />
+          <CampoFormulario etiqueta="Destino" htmlFor="salidas-destino">
+            <input
+              id="salidas-destino"
+              placeholder="Ej. Obra norte"
+              value={destino}
+              onChange={(e) => setDestino(e.target.value)}
+              style={inputStyleCampo}
+            />
+          </CampoFormulario>
 
-          <input
-            placeholder="Vehículo"
-            value={vehiculo}
-            onChange={(e) => setVehiculo(e.target.value)}
-            style={inputStyle}
-          />
+          <CampoFormulario etiqueta="Vehículo" htmlFor="salidas-vehiculo">
+            <input
+              id="salidas-vehiculo"
+              placeholder="Ej. Van 12"
+              value={vehiculo}
+              onChange={(e) => setVehiculo(e.target.value)}
+              style={inputStyleCampo}
+            />
+          </CampoFormulario>
 
-          <input
-            placeholder="Autorizó"
-            value={autorizo}
-            onChange={(e) => setAutorizo(e.target.value)}
-            style={inputStyle}
-          />
+          <CampoFormulario etiqueta="Autorizó" htmlFor="salidas-autorizo">
+            <input
+              id="salidas-autorizo"
+              placeholder="Nombre de quien autoriza"
+              value={autorizo}
+              onChange={(e) => setAutorizo(e.target.value)}
+              style={inputStyleCampo}
+            />
+          </CampoFormulario>
 
           <button
             type="button"
@@ -580,6 +602,11 @@ const inputStyle: React.CSSProperties = {
   fontSize: 15,
   outline: 'none',
   boxSizing: 'border-box',
+};
+
+const inputStyleCampo: React.CSSProperties = {
+  ...inputStyle,
+  marginBottom: 0,
 };
 
 const buttonStyle: React.CSSProperties = {

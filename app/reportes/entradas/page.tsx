@@ -18,6 +18,7 @@ import { ConfirmarEliminarModal } from '@/components/ConfirmarEliminarModal';
 import { useReporteRolAdmin } from '@/hooks/useReporteRolAdmin';
 import { useSeleccionFilas } from '@/hooks/useSeleccionFilas';
 import { getUserRole, isAdmin } from '@/lib/roles';
+import { CampoFormulario } from '@/components/CampoFormulario';
 
 type Entrada = {
   id: string | number;
@@ -26,6 +27,20 @@ type Entrada = {
   unidad: string | null;
   origen: string | null;
   creado_en: string | null;
+};
+
+const reporteThCheckboxSel: CSSProperties = {
+  ...reporteThCheckbox,
+  width: 100,
+  maxWidth: 100,
+  verticalAlign: 'top',
+};
+
+const reporteTdCheckboxSel: CSSProperties = {
+  ...reporteTdCheckbox,
+  width: 100,
+  maxWidth: 100,
+  verticalAlign: 'top',
 };
 
 const btnEliminar: CSSProperties = {
@@ -220,17 +235,31 @@ export default function ReporteEntradasPage() {
           <div style={reporteEmptyBox}>No hay entradas registradas.</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                minWidth: 560 + (mostrarSeleccion ? 56 : 0),
+              }}
+            >
               <thead>
                 <tr style={reporteTheadRow}>
                   {mostrarSeleccion ? (
-                    <th style={reporteThCheckbox}>
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        onChange={toggleAll}
-                        aria-label="Seleccionar todas las filas"
-                      />
+                    <th style={reporteThCheckboxSel}>
+                      <CampoFormulario
+                        etiqueta="Seleccionar todos"
+                        htmlFor="rep-ent-sel-todos"
+                        margenInferior={2}
+                        tamanoEtiqueta={11}
+                      >
+                        <input
+                          id="rep-ent-sel-todos"
+                          type="checkbox"
+                          checked={allSelected}
+                          onChange={toggleAll}
+                          aria-label="Seleccionar todas las filas"
+                        />
+                      </CampoFormulario>
                     </th>
                   ) : null}
                   <th style={reporteTh}>Producto</th>
@@ -248,13 +277,21 @@ export default function ReporteEntradasPage() {
                     }}
                   >
                     {mostrarSeleccion ? (
-                      <td style={reporteTdCheckbox}>
-                        <input
-                          type="checkbox"
-                          checked={selected.has(String(item.id))}
-                          onChange={() => toggle(item.id)}
-                          aria-label={`Seleccionar ${item.producto || 'fila'}`}
-                        />
+                      <td style={reporteTdCheckboxSel}>
+                        <CampoFormulario
+                          etiqueta="Elegir"
+                          htmlFor={`rep-ent-tab-${String(item.id)}`}
+                          margenInferior={0}
+                          tamanoEtiqueta={10}
+                        >
+                          <input
+                            id={`rep-ent-tab-${String(item.id)}`}
+                            type="checkbox"
+                            checked={selected.has(String(item.id))}
+                            onChange={() => toggle(item.id)}
+                            aria-label={`Seleccionar ${item.producto || 'fila'}`}
+                          />
+                        </CampoFormulario>
                       </td>
                     ) : null}
                     <td style={reporteTd}>{item.producto || '—'}</td>
