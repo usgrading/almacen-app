@@ -157,7 +157,16 @@ export default function EntradasPage() {
 
     try {
       const { data: userData } = await supabase.auth.getUser();
-      const usuarioId = userData.user?.id;
+      const userId = userData.user?.id;
+
+      if (!userId) {
+        alert(
+          'No hay sesión activa o el usuario no es válido. Cierra sesión e inicia sesión de nuevo.'
+        );
+        setCargando(false);
+        return;
+      }
+
       const productoNormalizado = producto.trim().toLowerCase();
 
       const cantidadNum = convertirNumero(cantidad);
@@ -198,7 +207,8 @@ export default function EntradasPage() {
             costo_total: costoTotalFinal > 0 ? costoTotalFinal : null,
             ubicacion,
             notas: notas.trim() || null,
-            creado_por: usuarioId || null,
+            user_id: userId,
+            creado_por: userId,
             foto_pieza: null,
             foto_factura: null,
             origen: 'MX',
