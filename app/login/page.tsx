@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { CampoFormulario } from '@/components/CampoFormulario';
+import {
+  MENSAJE_ERROR_PASSWORD,
+  validarPassword,
+} from '@/lib/validar-password';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +22,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sesionVerificada, setSesionVerificada] = useState(false);
+  const [errorContraseña, setErrorContraseña] = useState('');
 
   useEffect(() => {
     const verificarSesion = async () => {
@@ -38,6 +43,12 @@ export default function LoginPage() {
       alert('Llena correo y contraseña');
       return;
     }
+
+    if (!validarPassword(password)) {
+      setErrorContraseña(MENSAJE_ERROR_PASSWORD);
+      return;
+    }
+    setErrorContraseña('');
 
     try {
       setLoading(true);
@@ -138,14 +149,17 @@ export default function LoginPage() {
           />
         </CampoFormulario>
 
-        <CampoFormulario etiqueta="Contraseña" htmlFor="login-password" margenInferior={16}>
+        <CampoFormulario etiqueta="Contraseña" htmlFor="login-password" margenInferior={errorContraseña ? 6 : 16}>
           <div style={{ position: 'relative' }}>
             <input
               id="login-password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (errorContraseña) setErrorContraseña('');
+              }}
               style={{
                 width: '100%',
                 padding: '14px 56px 14px 14px',
@@ -173,6 +187,20 @@ export default function LoginPage() {
             </span>
           </div>
         </CampoFormulario>
+
+        {errorContraseña ? (
+          <p
+            role="alert"
+            style={{
+              margin: '0 0 14px 0',
+              color: '#B91C1C',
+              fontSize: 13,
+              lineHeight: 1.35,
+            }}
+          >
+            {errorContraseña}
+          </p>
+        ) : null}
 
         <button
           onClick={handleLogin}

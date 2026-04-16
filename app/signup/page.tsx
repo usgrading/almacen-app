@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CampoFormulario } from '@/components/CampoFormulario';
 import { supabase } from '@/lib/supabase';
+import {
+  MENSAJE_ERROR_PASSWORD,
+  validarPassword,
+} from '@/lib/validar-password';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -15,6 +19,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sesionVerificada, setSesionVerificada] = useState(false);
+  const [errorContraseña, setErrorContraseña] = useState('');
 
   useEffect(() => {
     const verificarSesion = async () => {
@@ -41,10 +46,11 @@ export default function SignupPage() {
       return;
     }
 
-    if (password.length < 6) {
-      alert('La contraseña debe tener mínimo 6 caracteres');
+    if (!validarPassword(password)) {
+      setErrorContraseña(MENSAJE_ERROR_PASSWORD);
       return;
     }
+    setErrorContraseña('');
 
     try {
       setLoading(true);
@@ -191,7 +197,10 @@ export default function SignupPage() {
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (errorContraseña) setErrorContraseña('');
+              }}
               style={{
                 width: '100%',
                 padding: '14px 72px 14px 14px',
@@ -220,13 +229,16 @@ export default function SignupPage() {
           </div>
         </CampoFormulario>
 
-        <CampoFormulario etiqueta="Confirmar contraseña" htmlFor="signup-confirm" margenInferior={16}>
+        <CampoFormulario etiqueta="Confirmar contraseña" htmlFor="signup-confirm" margenInferior={errorContraseña ? 6 : 16}>
           <input
             id="signup-confirm"
             type={showPassword ? 'text' : 'password'}
             autoComplete="new-password"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              if (errorContraseña) setErrorContraseña('');
+            }}
             style={{
               width: '100%',
               padding: 14,
@@ -237,6 +249,20 @@ export default function SignupPage() {
             }}
           />
         </CampoFormulario>
+
+        {errorContraseña ? (
+          <p
+            role="alert"
+            style={{
+              margin: '0 0 14px 0',
+              color: '#B91C1C',
+              fontSize: 13,
+              lineHeight: 1.35,
+            }}
+          >
+            {errorContraseña}
+          </p>
+        ) : null}
 
         <button
           onClick={handleRegister}
