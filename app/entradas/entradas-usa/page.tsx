@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { canMutate, getUserRole, isViewer, type AppRole } from '@/lib/roles';
+import {
+  buscarInventarioEntrada,
+  obtenerOrganizacionParaEntrada,
+} from '@/lib/entrada-inventario';
 
 type EntradaResumen = {
   producto?: string | null;
@@ -46,6 +50,9 @@ export default function EntradasPage() {
   const [maximo, setMaximo] = useState('');
   const [esPrimeraCaptura, setEsPrimeraCaptura] = useState<boolean | null>(null);
   const [validandoPrimeraCaptura, setValidandoPrimeraCaptura] = useState(false);
+  const [orgIdPerfil, setOrgIdPerfil] = useState<string | null | undefined>(
+    undefined
+  );
 
   const estiloInput: React.CSSProperties = {
     width: '100%',
@@ -113,6 +120,10 @@ export default function EntradasPage() {
       setAppRole(r);
       setRolListo(true);
     });
+  }, []);
+
+  useEffect(() => {
+    void obtenerOrganizacionParaEntrada(supabase).then(setOrgIdPerfil);
   }, []);
 
   const convertirNumero = (valor: string) => {
@@ -225,13 +236,22 @@ export default function EntradasPage() {
         return;
       }
 
+      const orgId = await obtenerOrganizacionParaEntrada(supabase);
+      if (!orgId) {
+        alert(
+          'La entrada se guardó, pero no se pudo actualizar el inventario: no hay organización asignada al perfil. Revisa tu sesión o contacta al administrador.'
+        );
+        setCargando(false);
+        return;
+      }
+
       const { data: inventarioExistente, error: errorInventario } =
-        await supabase
-          .from('inventario')
-          .select('*')
-          .eq('producto', productoNormalizado)
-          .eq('origen', 'USA')
-          .maybeSingle();
+        await buscarInventarioEntrada(
+          supabase,
+          productoNormalizado,
+          'USA',
+          orgId
+        );
 
       if (errorInventario) {
         console.error('Error inventario:', errorInventario);
@@ -256,22 +276,31 @@ export default function EntradasPage() {
           nuevoCostoUnitario = costoUnitarioFinal;
         }
 
-        const { error: errorUpdate } = await supabase
+        const { data: filasActualizadas, error: errorUpdate } = await supabase
           .from('inventario')
           .update({
             cantidad_actual: nuevaCantidad,
             unidad,
             ubicacion,
             origen: 'USA',
+            organization_id: orgId,
             costo_unitario: nuevoCostoUnitario > 0 ? nuevoCostoUnitario : null,
             valor_inventario:
               nuevoValorInventario > 0 ? nuevoValorInventario : null,
           })
-          .eq('id', inventarioExistente.id);
+          .eq('id', inventarioExistente.id)
+          .select('id');
 
         if (errorUpdate) {
           console.error('Error update inventario:', errorUpdate);
           alert('Error actualizando inventario: ' + errorUpdate.message);
+          setCargando(false);
+          return;
+        }
+        if (!filasActualizadas?.length) {
+          alert(
+            'La entrada se guardó, pero el inventario no se actualizó (sin filas afectadas). Suele deberse a permisos RLS o a organization_id en inventario.'
+          );
           setCargando(false);
           return;
         }
@@ -297,23 +326,37 @@ export default function EntradasPage() {
           return;
         }
 
-        const { error: errorInsert } = await supabase.from('inventario').insert([
-          {
-            producto: productoNormalizado,
-            cantidad_actual: cantidadNum,
-            unidad,
-            ubicacion,
-            origen: 'USA',
-            costo_unitario: costoUnitarioFinal > 0 ? costoUnitarioFinal : null,
-            valor_inventario: costoTotalFinal > 0 ? costoTotalFinal : null,
-            minimo: minimoNum,
-            maximo: maximoNum,
-          },
-        ]);
+        const { data: filasInsertadas, error: errorInsert } = await supabase
+          .from('inventario')
+          .insert([
+            {
+              producto: productoNormalizado,
+              cantidad_actual: cantidadNum,
+              unidad,
+              ubicacion,
+              origen: 'USA',
+              organization_id: orgId,
+              costo_unitario: costoUnitarioFinal > 0 ? costoUnitarioFinal : null,
+              valor_inventario: costoTotalFinal > 0 ? costoTotalFinal : null,
+              minimo: minimoNum,
+              maximo: maximoNum,
+            },
+          ])
+          .select('id');
 
         if (errorInsert) {
           console.error('Error insert inventario:', errorInsert);
-          alert('Error creando inventario: ' + errorInsert.message);
+          alert(
+            'La entrada se guardó, pero no se pudo crear el inventario: ' +
+              errorInsert.message
+          );
+          setCargando(false);
+          return;
+        }
+        if (!filasInsertadas?.length) {
+          alert(
+            'La entrada se guardó, pero no se creó fila en inventario (revisa permisos RLS o organization_id).'
+          );
           setCargando(false);
           return;
         }
@@ -374,15 +417,19 @@ export default function EntradasPage() {
       return;
     }
 
+    if (orgIdPerfil === undefined) {
+      return;
+    }
+
     const timeout = setTimeout(async () => {
       setValidandoPrimeraCaptura(true);
 
-      const { data, error } = await supabase
-        .from('inventario')
-        .select('*')
-        .eq('producto', productoNormalizado)
-        .eq('origen', 'USA')
-        .maybeSingle();
+      const { data, error } = await buscarInventarioEntrada(
+        supabase,
+        productoNormalizado,
+        'USA',
+        orgIdPerfil
+      );
 
       if (error) {
         setEsPrimeraCaptura(null);
@@ -409,7 +456,7 @@ export default function EntradasPage() {
     }, 350);
 
     return () => clearTimeout(timeout);
-  }, [producto]);
+  }, [producto, orgIdPerfil]);
 
   return (
     <main
