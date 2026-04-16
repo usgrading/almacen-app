@@ -164,6 +164,22 @@ export const reporteTdCenter: React.CSSProperties = {
   textAlign: "center",
 };
 
+export const reporteThCheckbox: React.CSSProperties = {
+  ...reporteTh,
+  width: 44,
+  maxWidth: 44,
+  textAlign: "center",
+  verticalAlign: "middle",
+};
+
+export const reporteTdCheckbox: React.CSSProperties = {
+  ...reporteTd,
+  width: 44,
+  maxWidth: 44,
+  textAlign: "center",
+  verticalAlign: "middle",
+};
+
 export const reporteLoadingBox: React.CSSProperties = {
   padding: 20,
   textAlign: "center",

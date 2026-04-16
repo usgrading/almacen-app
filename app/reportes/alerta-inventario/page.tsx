@@ -1,18 +1,24 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   ReporteLayout,
   reporteEmptyBox,
   reporteLoadingBox,
   reporteTd,
+  reporteTdCheckbox,
   reporteTh,
+  reporteThCheckbox,
   reporteTheadRow,
 } from '@/components/ReporteLayout';
 import { filtrarAlertasInventario } from '@/lib/alertas-inventario';
 import { ReporteExportarExcelButton } from '@/components/ReporteExportarExcelButton';
 import { exportarAExcel } from '@/lib/export-excel';
+import { ConfirmarEliminarModal } from '@/components/ConfirmarEliminarModal';
+import { useReporteRolAdmin } from '@/hooks/useReporteRolAdmin';
+import { useSeleccionFilas } from '@/hooks/useSeleccionFilas';
+import { getUserRole, isAdmin } from '@/lib/roles';
 
 type InventarioItem = {
   id: string | number;
@@ -33,9 +39,32 @@ const subtituloAlerta = (
   </>
 );
 
+const btnEliminar: CSSProperties = {
+  padding: '10px 16px',
+  borderRadius: 12,
+  border: '1px solid #FECACA',
+  background: '#FEF2F2',
+  color: '#991B1B',
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: 'pointer',
+  fontFamily: 'Arial, sans-serif',
+};
+
 export default function ReporteAlertaInventarioPage() {
   const [loading, setLoading] = useState(true);
   const [inventario, setInventario] = useState<InventarioItem[]>([]);
+  const { esAdmin, listo } = useReporteRolAdmin();
+
+  const alertas = useMemo(
+    () => filtrarAlertasInventario(inventario),
+    [inventario]
+  );
+
+  const { selected, toggle, toggleAll, clear, allSelected, count } =
+    useSeleccionFilas(alertas);
+  const [modalEliminar, setModalEliminar] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     const cargar = async () => {
@@ -59,11 +88,6 @@ export default function ReporteAlertaInventarioPage() {
 
     void cargar();
   }, []);
-
-  const alertas = useMemo(
-    () => filtrarAlertasInventario(inventario),
-    [inventario]
-  );
 
   const exportar = () => {
     const filas = alertas.map((item) => ({
@@ -91,65 +115,145 @@ export default function ReporteAlertaInventarioPage() {
     );
   };
 
+  const solicitarEliminar = () => {
+    if (!listo || !esAdmin || count === 0) return;
+    setModalEliminar(true);
+  };
+
+  const ejecutarEliminar = async () => {
+    const rol = await getUserRole(supabase);
+    if (!isAdmin(rol)) {
+      alert('Solo un administrador puede eliminar registros.');
+      setModalEliminar(false);
+      return;
+    }
+    const ids = Array.from(selected);
+    if (ids.length === 0) {
+      setModalEliminar(false);
+      return;
+    }
+    setEliminando(true);
+    try {
+      const { error } = await supabase.from('inventario').delete().in('id', ids);
+      if (error) throw error;
+      setInventario((prev) => prev.filter((it) => !selected.has(String(it.id))));
+      clear();
+      setModalEliminar(false);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al eliminar');
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  const mostrarSeleccion = listo && esAdmin;
+
   return (
     <ReporteLayout title="Alerta de inventario" subtitle={subtituloAlerta}>
       <>
         <div
           style={{
             display: 'flex',
-            justifyContent: 'flex-end',
+            flexWrap: 'wrap',
+            gap: 12,
             marginBottom: 12,
+            alignItems: 'center',
             padding: '0 4px',
           }}
         >
-          <ReporteExportarExcelButton
-            disabled={loading || alertas.length === 0}
-            onClick={exportar}
-          />
+          {mostrarSeleccion ? (
+            <button
+              type="button"
+              disabled={count === 0 || eliminando}
+              onClick={solicitarEliminar}
+              style={{
+                ...btnEliminar,
+                opacity: count === 0 || eliminando ? 0.5 : 1,
+                cursor: count === 0 || eliminando ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Eliminar seleccionados ({count})
+            </button>
+          ) : null}
+          <div style={{ marginLeft: 'auto' }}>
+            <ReporteExportarExcelButton
+              disabled={loading || alertas.length === 0}
+              onClick={exportar}
+            />
+          </div>
         </div>
+
+        <ConfirmarEliminarModal
+          abierto={modalEliminar}
+          mensaje="¿Seguro que quieres eliminar los registros seleccionados?"
+          onCancelar={() => !eliminando && setModalEliminar(false)}
+          onConfirmar={ejecutarEliminar}
+          cargando={eliminando}
+        />
+
         {loading ? (
-        <div style={reporteLoadingBox}>Cargando...</div>
-      ) : alertas.length === 0 ? (
-        <div style={reporteEmptyBox}>
-          No hay alertas: ningún producto queda bajo el mínimo guardado desde la primera entrada,
-          o aún no hay productos dados de alta con mínimo/máximo en Entradas.
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
-            <thead>
-              <tr style={reporteTheadRow}>
-                <th style={reporteTh}>Producto</th>
-                <th style={reporteTh}>Origen</th>
-                <th style={reporteTh}>Cantidad actual</th>
-                <th style={reporteTh}>Mínimo</th>
-                <th style={reporteTh}>Máximo</th>
-                <th style={reporteTh}>Unidad</th>
-                <th style={reporteTh}>Ubicación</th>
-              </tr>
-            </thead>
-            <tbody>
-              {alertas.map((item, index) => (
-                <tr
-                  key={item.id}
-                  style={{
-                    background: index % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
-                  }}
-                >
-                  <td style={reporteTd}>{item.producto || '—'}</td>
-                  <td style={reporteTd}>{item.origen || '—'}</td>
-                  <td style={{ ...reporteTd, fontWeight: 700, color: '#B45309' }}>
-                    {item.cantidad_actual ?? 0}
-                  </td>
-                  <td style={reporteTd}>{item.minimo ?? '—'}</td>
-                  <td style={reporteTd}>{item.maximo ?? '—'}</td>
-                  <td style={reporteTd}>{item.unidad || '—'}</td>
-                  <td style={reporteTd}>{item.ubicacion || '—'}</td>
+          <div style={reporteLoadingBox}>Cargando...</div>
+        ) : alertas.length === 0 ? (
+          <div style={reporteEmptyBox}>
+            No hay alertas: ningún producto queda bajo el mínimo guardado desde la primera entrada,
+            o aún no hay productos dados de alta con mínimo/máximo en Entradas.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+              <thead>
+                <tr style={reporteTheadRow}>
+                  {mostrarSeleccion ? (
+                    <th style={reporteThCheckbox}>
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={toggleAll}
+                        aria-label="Seleccionar todas las filas"
+                      />
+                    </th>
+                  ) : null}
+                  <th style={reporteTh}>Producto</th>
+                  <th style={reporteTh}>Origen</th>
+                  <th style={reporteTh}>Cantidad actual</th>
+                  <th style={reporteTh}>Mínimo</th>
+                  <th style={reporteTh}>Máximo</th>
+                  <th style={reporteTh}>Unidad</th>
+                  <th style={reporteTh}>Ubicación</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {alertas.map((item, index) => (
+                  <tr
+                    key={item.id}
+                    style={{
+                      background: index % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
+                    }}
+                  >
+                    {mostrarSeleccion ? (
+                      <td style={reporteTdCheckbox}>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(String(item.id))}
+                          onChange={() => toggle(item.id)}
+                          aria-label={`Seleccionar ${item.producto || 'fila'}`}
+                        />
+                      </td>
+                    ) : null}
+                    <td style={reporteTd}>{item.producto || '—'}</td>
+                    <td style={reporteTd}>{item.origen || '—'}</td>
+                    <td style={{ ...reporteTd, fontWeight: 700, color: '#B45309' }}>
+                      {item.cantidad_actual ?? 0}
+                    </td>
+                    <td style={reporteTd}>{item.minimo ?? '—'}</td>
+                    <td style={reporteTd}>{item.maximo ?? '—'}</td>
+                    <td style={reporteTd}>{item.unidad || '—'}</td>
+                    <td style={reporteTd}>{item.ubicacion || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </>
     </ReporteLayout>

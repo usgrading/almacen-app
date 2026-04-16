@@ -1,10 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { supabase } from '@/lib/supabase';
-import { ReporteLayout } from '@/components/ReporteLayout';
+import {
+  ReporteLayout,
+  reporteTdCheckbox,
+  reporteThCheckbox,
+} from '@/components/ReporteLayout';
 import { ReporteExportarExcelButton } from '@/components/ReporteExportarExcelButton';
 import { exportarAExcel } from '@/lib/export-excel';
+import { ConfirmarEliminarModal } from '@/components/ConfirmarEliminarModal';
+import { useReporteRolAdmin } from '@/hooks/useReporteRolAdmin';
+import { useSeleccionFilas } from '@/hooks/useSeleccionFilas';
+import { getUserRole, isAdmin } from '@/lib/roles';
 
 type FiltroOrigen = 'TODOS' | 'MX' | 'USA';
 
@@ -25,8 +33,9 @@ export default function InventarioPage() {
   const [esCel, setEsCel] = useState(false);
   const [filtroOrigen, setFiltroOrigen] = useState<FiltroOrigen>('TODOS');
 
-  // TODO: luego esto debe venir del perfil del usuario
-  const esAdmin = true;
+  const { esAdmin, listo } = useReporteRolAdmin();
+  const [modalEliminar, setModalEliminar] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     const cargarInventario = async () => {
@@ -85,6 +94,9 @@ export default function InventarioPage() {
       );
     });
   }, [inventario, busqueda, filtroOrigen]);
+
+  const { selected, toggle, toggleAll, clear, allSelected, count } =
+    useSeleccionFilas(inventarioFiltrado);
 
   const totalProductos = inventarioFiltrado.length;
 
@@ -161,20 +173,91 @@ export default function InventarioPage() {
     exportarAExcel(filas, columnas, 'inventario', 'Inventario');
   };
 
+  const solicitarEliminar = () => {
+    if (!listo || !esAdmin || count === 0) return;
+    setModalEliminar(true);
+  };
+
+  const ejecutarEliminar = async () => {
+    const rol = await getUserRole(supabase);
+    if (!isAdmin(rol)) {
+      alert('Solo un administrador puede eliminar registros.');
+      setModalEliminar(false);
+      return;
+    }
+    const ids = Array.from(selected);
+    if (ids.length === 0) {
+      setModalEliminar(false);
+      return;
+    }
+    setEliminando(true);
+    try {
+      const { error } = await supabase.from('inventario').delete().in('id', ids);
+      if (error) throw error;
+      setInventario((prev) => prev.filter((it) => !selected.has(String(it.id))));
+      clear();
+      setModalEliminar(false);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al eliminar');
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  const mostrarSeleccion = listo && esAdmin;
+
+  const btnEliminar: CSSProperties = {
+    padding: '10px 16px',
+    borderRadius: 12,
+    border: '1px solid #FECACA',
+    background: '#FEF2F2',
+    color: '#991B1B',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Arial, sans-serif',
+  };
+
   return (
     <ReporteLayout title="Inventario general" noCard>
         <div
           style={{
             display: 'flex',
-            justifyContent: 'flex-end',
+            flexWrap: 'wrap',
+            gap: 12,
             marginBottom: 16,
+            alignItems: 'center',
           }}
         >
-          <ReporteExportarExcelButton
-            disabled={inventarioFiltrado.length === 0}
-            onClick={exportar}
-          />
+          {mostrarSeleccion ? (
+            <button
+              type="button"
+              disabled={count === 0 || eliminando}
+              onClick={solicitarEliminar}
+              style={{
+                ...btnEliminar,
+                opacity: count === 0 || eliminando ? 0.5 : 1,
+                cursor: count === 0 || eliminando ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Eliminar seleccionados ({count})
+            </button>
+          ) : null}
+          <div style={{ marginLeft: 'auto' }}>
+            <ReporteExportarExcelButton
+              disabled={inventarioFiltrado.length === 0}
+              onClick={exportar}
+            />
+          </div>
         </div>
+
+        <ConfirmarEliminarModal
+          abierto={modalEliminar}
+          mensaje="¿Seguro que quieres eliminar los registros seleccionados?"
+          onCancelar={() => !eliminando && setModalEliminar(false)}
+          onConfirmar={ejecutarEliminar}
+          cargando={eliminando}
+        />
 
         <div
           style={{
@@ -314,6 +397,15 @@ export default function InventarioPage() {
                       marginBottom: 8,
                     }}
                   >
+                    {mostrarSeleccion ? (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(String(item.id))}
+                        onChange={() => toggle(item.id)}
+                        aria-label={`Seleccionar ${item.producto || 'fila'}`}
+                        style={{ flexShrink: 0 }}
+                      />
+                    ) : null}
                     <div
                       style={{
                         fontWeight: 700,
@@ -365,11 +457,22 @@ export default function InventarioPage() {
                 style={{
                   width: '100%',
                   borderCollapse: 'collapse',
-                  minWidth: esAdmin ? 920 : 760,
+                  minWidth:
+                    (esAdmin ? 920 : 760) + (mostrarSeleccion ? 44 : 0),
                 }}
               >
                 <thead>
                   <tr style={{ background: '#E2E8F0' }}>
+                    {mostrarSeleccion ? (
+                      <th style={reporteThCheckbox}>
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          onChange={toggleAll}
+                          aria-label="Seleccionar todas las filas"
+                        />
+                      </th>
+                    ) : null}
                     <th style={headerStyle}>Producto</th>
                     <th style={headerStyle}>Cantidad actual</th>
                     <th style={headerStyle}>Unidad</th>
@@ -387,6 +490,16 @@ export default function InventarioPage() {
                         background: index % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
                       }}
                     >
+                      {mostrarSeleccion ? (
+                        <td style={reporteTdCheckbox}>
+                          <input
+                            type="checkbox"
+                            checked={selected.has(String(item.id))}
+                            onChange={() => toggle(item.id)}
+                            aria-label={`Seleccionar ${item.producto || 'fila'}`}
+                          />
+                        </td>
+                      ) : null}
                       <td style={cellStyle}>{item.producto || '—'}</td>
                       <td style={cellStyle}>{toNumber(item.cantidad_actual)}</td>
                       <td style={cellStyle}>{item.unidad || '—'}</td>
