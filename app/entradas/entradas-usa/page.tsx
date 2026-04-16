@@ -26,6 +26,8 @@ import {
   appTituloPagina,
 } from '@/lib/app-ui';
 import { subirImagenFacturaAlBucket } from '@/lib/subir-factura-storage';
+import { solicitarAnalisisFactura } from '@/lib/analizar-factura-client';
+import { fechaTextoAInputDate, totalTextoACostoTotal } from '@/lib/factura-campos-helpers';
 
 type EntradaResumen = {
   producto?: string | null;
@@ -78,6 +80,7 @@ export default function EntradasPage() {
   );
   const refInputArchivoFactura = useRef<HTMLInputElement>(null);
   const refInputCamaraFactura = useRef<HTMLInputElement>(null);
+  const [analizandoFactura, setAnalizandoFactura] = useState(false);
 
   const aplicarArchivoFactura = (e: ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
@@ -101,6 +104,34 @@ export default function EntradasPage() {
       if (previewFacturaUrl) URL.revokeObjectURL(previewFacturaUrl);
     };
   }, [previewFacturaUrl]);
+
+  const handleAnalizarFactura = async () => {
+    if (!archivoFactura) {
+      alert('Primero selecciona una factura');
+      return;
+    }
+    setAnalizandoFactura(true);
+    try {
+      const result = await solicitarAnalisisFactura(archivoFactura);
+      if (!result.ok) {
+        alert(result.error);
+        return;
+      }
+      const { datos } = result;
+      if (datos.proveedor.trim()) setProveedor(datos.proveedor.trim());
+      if (datos.numero_factura.trim()) {
+        setNumeroFactura(datos.numero_factura.trim());
+      }
+      const f = fechaTextoAInputDate(datos.fecha);
+      if (f) setFecha(f);
+      const tot = totalTextoACostoTotal(datos.total);
+      if (tot) setCostoTotal(tot);
+    } catch {
+      alert('No se pudo analizar la factura');
+    } finally {
+      setAnalizandoFactura(false);
+    }
+  };
 
   const estiloInput: CSSProperties = {
     ...appInput,
@@ -659,7 +690,7 @@ export default function EntradasPage() {
                 <button
                   type="button"
                   className="app-btn-primario"
-                  disabled={!puedeRegistrar || cargando}
+                  disabled={!puedeRegistrar || cargando || analizandoFactura}
                   style={{
                     ...appBtnPrimario,
                     flex: 1,
@@ -675,7 +706,7 @@ export default function EntradasPage() {
                 <button
                   type="button"
                   className="app-btn-primario"
-                  disabled={!puedeRegistrar || cargando}
+                  disabled={!puedeRegistrar || cargando || analizandoFactura}
                   style={{
                     ...appBtnPrimario,
                     flex: 1,
@@ -692,6 +723,7 @@ export default function EntradasPage() {
               <button
                 type="button"
                 className="app-btn-primario"
+                disabled={!puedeRegistrar || cargando || analizandoFactura}
                 style={{
                   ...appBtnPrimario,
                   width: '100%',
@@ -700,15 +732,9 @@ export default function EntradasPage() {
                   background: '#334155',
                   boxShadow: '0 4px 16px rgba(51, 65, 85, 0.35)',
                 }}
-                onClick={() => {
-                  if (!archivoFactura) {
-                    alert('Primero selecciona una factura');
-                    return;
-                  }
-                  console.log('Analizando factura...');
-                }}
+                onClick={() => void handleAnalizarFactura()}
               >
-                🤖 Analizar Factura
+                {analizandoFactura ? 'Analizando...' : '🤖 Analizar Factura'}
               </button>
 
               <div
