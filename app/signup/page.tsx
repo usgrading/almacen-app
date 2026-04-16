@@ -114,7 +114,6 @@ export default function SignupPage() {
           <input
             id="signup-nombre"
             autoComplete="name"
-            placeholder="Nombre completo"
             value={name}
             onChange={(e) => setName(e.target.value)}
             style={{
@@ -131,7 +130,6 @@ export default function SignupPage() {
         <CampoFormulario etiqueta="Correo" htmlFor="signup-email" margenInferior={10}>
           <input
             id="signup-email"
-            placeholder="nombre@ejemplo.com"
             type="email"
             autoComplete="email"
             value={email}
@@ -151,7 +149,6 @@ export default function SignupPage() {
           <div style={{ position: 'relative' }}>
             <input
               id="signup-password"
-              placeholder="Mínimo 6 caracteres"
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               value={password}
@@ -187,7 +184,6 @@ export default function SignupPage() {
         <CampoFormulario etiqueta="Confirmar contraseña" htmlFor="signup-confirm" margenInferior={16}>
           <input
             id="signup-confirm"
-            placeholder="Repite la contraseña"
             type={showPassword ? 'text' : 'password'}
             autoComplete="new-password"
             value={confirmPassword}

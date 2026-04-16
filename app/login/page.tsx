@@ -95,7 +95,6 @@ export default function LoginPage() {
             id="login-email"
             type="email"
             autoComplete="email"
-            placeholder="nombre@ejemplo.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             style={{
@@ -113,7 +112,6 @@ export default function LoginPage() {
           <div style={{ position: 'relative' }}>
             <input
               id="login-password"
-              placeholder="Tu contraseña"
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               value={password}

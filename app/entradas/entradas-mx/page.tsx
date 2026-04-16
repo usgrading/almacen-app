@@ -75,6 +75,61 @@ export default function EntradasPage() {
     marginBottom: 0,
   };
 
+  const filaDinero: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'stretch',
+    width: '100%',
+    borderRadius: 10,
+    border: '1px solid #D1D5DB',
+    background: '#F8FAFC',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  };
+
+  const prefijoDolar: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0 12px',
+    fontWeight: 600,
+    fontSize: 16,
+    color: '#475569',
+    background: '#EEF2F7',
+    borderRight: '1px solid #D1D5DB',
+    flexShrink: 0,
+  };
+
+  const inputDinero: React.CSSProperties = {
+    flex: 1,
+    minWidth: 0,
+    padding: 12,
+    border: 'none',
+    borderRadius: 0,
+    background: '#F8FAFC',
+    color: '#1F2937',
+    fontSize: 15,
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  const filaDineroTotal: React.CSSProperties = {
+    ...filaDinero,
+    background: '#F1F5F9',
+    borderColor: '#CBD5E1',
+  };
+
+  const prefijoDolarTotal: React.CSSProperties = {
+    ...prefijoDolar,
+    background: '#E2E8F0',
+    color: '#64748B',
+  };
+
+  const inputDineroTotal: React.CSSProperties = {
+    ...inputDinero,
+    background: '#F1F5F9',
+    color: '#475569',
+  };
+
   const estiloTituloSeccion: React.CSSProperties = {
     marginTop: 0,
     marginBottom: 12,
@@ -610,7 +665,6 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Proveedor" htmlFor="entrada-mx-proveedor">
               <input
                 id="entrada-mx-proveedor"
-                placeholder="Ej. nombre del proveedor"
                 value={proveedor}
                 onChange={(e) => setProveedor(e.target.value)}
                 style={estiloInputCampo}
@@ -620,7 +674,6 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Número de factura" htmlFor="entrada-mx-factura">
               <input
                 id="entrada-mx-factura"
-                placeholder="Ej. A-1024"
                 value={numeroFactura}
                 onChange={(e) => setNumeroFactura(e.target.value)}
                 style={estiloInputCampo}
@@ -650,7 +703,6 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Foto de pieza" htmlFor="entrada-mx-foto-pieza">
               <input
                 id="entrada-mx-foto-pieza"
-                placeholder="Próximamente"
                 disabled
                 style={{ ...estiloInputDeshabilitado, marginBottom: 0 }}
               />
@@ -659,7 +711,6 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Nombre de pieza" htmlFor="entrada-mx-producto">
               <input
                 id="entrada-mx-producto"
-                placeholder="Ej. tornillo 1/2"
                 value={producto}
                 onChange={(e) => setProducto(e.target.value)}
                 style={estiloInputCampo}
@@ -732,7 +783,6 @@ export default function EntradasPage() {
                 id="entrada-mx-cantidad"
                 type="text"
                 inputMode="numeric"
-                placeholder="Ej. 10"
                 value={cantidad}
                 onChange={(e) =>
                   setCantidad(e.target.value.replace(/[^0-9]/g, ''))
@@ -762,42 +812,48 @@ export default function EntradasPage() {
             </CampoFormulario>
 
             <CampoFormulario etiqueta="Costo unitario" htmlFor="entrada-mx-costo-unit">
-              <input
-                id="entrada-mx-costo-unit"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Ej. 25.50"
-                value={costoUnitario}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === '') {
-                    setCostoUnitario('');
-                    return;
-                  }
-                  setCostoUnitario(v);
-                }}
-                style={estiloInputCampo}
-              />
+              <div style={filaDinero}>
+                <span style={prefijoDolar} aria-hidden="true">
+                  $
+                </span>
+                <input
+                  id="entrada-mx-costo-unit"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={costoUnitario}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === '') {
+                      setCostoUnitario('');
+                      return;
+                    }
+                    setCostoUnitario(v);
+                  }}
+                  style={inputDinero}
+                />
+              </div>
             </CampoFormulario>
 
             <CampoFormulario etiqueta="Costo total" htmlFor="entrada-mx-costo-total">
-              <input
-                id="entrada-mx-costo-total"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Calculado automáticamente"
-                value={costoTotal}
-                readOnly
-                tabIndex={-1}
-                aria-readonly="true"
-                style={{
-                  ...estiloInputCampo,
-                  background: '#F1F5F9',
-                  color: '#475569',
-                }}
-              />
+              <div style={filaDineroTotal}>
+                <span style={prefijoDolarTotal} aria-hidden="true">
+                  $
+                </span>
+                <input
+                  id="entrada-mx-costo-total"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Se calcula automáticamente"
+                  value={costoTotal}
+                  readOnly
+                  tabIndex={-1}
+                  aria-readonly="true"
+                  style={inputDineroTotal}
+                />
+              </div>
             </CampoFormulario>
 
             <CampoFormulario etiqueta="Ubicación" htmlFor="entrada-mx-ubicacion">
@@ -824,7 +880,6 @@ export default function EntradasPage() {
             <CampoFormulario etiqueta="Notas" htmlFor="entrada-mx-notas">
               <textarea
                 id="entrada-mx-notas"
-                placeholder="Observaciones opcionales"
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
                 style={{

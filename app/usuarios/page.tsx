@@ -327,7 +327,6 @@ export default function UsuariosPage() {
                 id="usuario-nombre"
                 style={{ ...styles.input, marginBottom: 0 }}
                 type="text"
-                placeholder="Nombre visible"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
               />
@@ -338,7 +337,6 @@ export default function UsuariosPage() {
                 id="usuario-email"
                 style={{ ...styles.input, marginBottom: 0 }}
                 type="email"
-                placeholder="correo@empresa.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -349,7 +347,6 @@ export default function UsuariosPage() {
                 id="usuario-username"
                 style={{ ...styles.input, marginBottom: 0 }}
                 type="text"
-                placeholder="Identificador de acceso"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -361,7 +358,6 @@ export default function UsuariosPage() {
                 style={{ ...styles.input, marginBottom: 0 }}
                 type="password"
                 autoComplete="new-password"
-                placeholder="Mínimo 6 caracteres"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />

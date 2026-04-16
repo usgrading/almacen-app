@@ -353,7 +353,6 @@ export default function InventarioPage() {
         <CampoFormulario etiqueta="Buscar" htmlFor="rep-inv-gen-busqueda">
           <input
             id="rep-inv-gen-busqueda"
-            placeholder="Producto, ubicación, unidad u origen"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             style={inputStyleCampo}

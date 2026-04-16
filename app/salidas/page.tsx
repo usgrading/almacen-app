@@ -296,7 +296,6 @@ export default function SalidasPage() {
           <CampoFormulario etiqueta="Foto de pieza (opcional)" htmlFor="salidas-foto">
             <input
               id="salidas-foto"
-              placeholder="URL o referencia"
               value={fotoPieza}
               onChange={(e) => setFotoPieza(e.target.value)}
               style={inputStyleCampo}
@@ -311,7 +310,6 @@ export default function SalidasPage() {
             >
               <input
                 id="salidas-producto"
-                placeholder="Buscar en inventario"
                 value={producto}
                 onChange={(e) => {
                   const valor = e.target.value;
@@ -442,7 +440,6 @@ export default function SalidasPage() {
               id="salidas-cantidad"
               type="text"
               inputMode="numeric"
-              placeholder="Ej. 5"
               value={cantidad}
               onChange={(e) =>
                 setCantidad(e.target.value.replace(/[^0-9]/g, ''))
@@ -472,7 +469,6 @@ export default function SalidasPage() {
           <CampoFormulario etiqueta="Destino" htmlFor="salidas-destino">
             <input
               id="salidas-destino"
-              placeholder="Ej. Obra norte"
               value={destino}
               onChange={(e) => setDestino(e.target.value)}
               style={inputStyleCampo}
@@ -482,7 +478,6 @@ export default function SalidasPage() {
           <CampoFormulario etiqueta="Vehículo" htmlFor="salidas-vehiculo">
             <input
               id="salidas-vehiculo"
-              placeholder="Ej. Van 12"
               value={vehiculo}
               onChange={(e) => setVehiculo(e.target.value)}
               style={inputStyleCampo}
@@ -492,7 +487,6 @@ export default function SalidasPage() {
           <CampoFormulario etiqueta="Autorizó" htmlFor="salidas-autorizo">
             <input
               id="salidas-autorizo"
-              placeholder="Nombre de quien autoriza"
               value={autorizo}
               onChange={(e) => setAutorizo(e.target.value)}
               style={inputStyleCampo}
