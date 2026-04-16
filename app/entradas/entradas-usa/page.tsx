@@ -8,6 +8,7 @@ import {
   buscarInventarioEntrada,
   obtenerOrganizacionParaEntrada,
 } from '@/lib/entrada-inventario';
+import { formatoDosDecimales } from '@/lib/format-money';
 
 type EntradaResumen = {
   producto?: string | null;
@@ -194,15 +195,13 @@ export default function EntradasPage() {
       let costoUnitarioFinal = 0;
       let costoTotalFinal = 0;
 
-      if (costoUnitarioNum > 0 && costoTotalNum > 0) {
+      // Regla: cantidad × costo_unitario = costo_total (ambos con 2 decimales).
+      if (costoUnitarioNum > 0) {
         costoUnitarioFinal = redondear2(costoUnitarioNum);
-        costoTotalFinal = redondear2(costoTotalNum);
-      } else if (costoUnitarioNum > 0) {
-        costoUnitarioFinal = redondear2(costoUnitarioNum);
-        costoTotalFinal = redondear2(cantidadNum * costoUnitarioNum);
+        costoTotalFinal = redondear2(cantidadNum * costoUnitarioFinal);
       } else if (costoTotalNum > 0) {
-        costoTotalFinal = redondear2(costoTotalNum);
         costoUnitarioFinal = redondear2(costoTotalNum / cantidadNum);
+        costoTotalFinal = redondear2(cantidadNum * costoUnitarioFinal);
       }
 
       const { data: nuevaEntrada, error: errorEntrada } = await supabase
@@ -401,7 +400,7 @@ export default function EntradasPage() {
     costoUnitarioNum > 0
   ) {
     const total = Math.round(cantidadNum * costoUnitarioNum * 100) / 100;
-    setCostoTotal(String(total));
+    setCostoTotal(total.toFixed(2));
   } else if (!costoUnitario.trim()) {
     setCostoTotal('');
   }
@@ -730,28 +729,37 @@ export default function EntradasPage() {
             </select>
 
             <input
-  type="text"
-  inputMode="decimal"
-  placeholder="$ Cost per unit"
-  value={costoUnitario}
-  onChange={(e) =>
-    setCostoUnitario(e.target.value.replace(/[^0-9.]/g, ''))
-  }
-  style={estiloInput}
-/>
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="$ Cost per unit"
+              value={costoUnitario}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === '') {
+                  setCostoUnitario('');
+                  return;
+                }
+                setCostoUnitario(v);
+              }}
+              style={estiloInput}
+            />
 
-<input
-  type="text"
-  inputMode="decimal"
-  placeholder="$ Total cost"
-  value={costoTotal}
-  readOnly
-  style={{
-    ...estiloInput,
-    background: '#F1F5F9',
-    color: '#475569',
-  }}
-/>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="$ Total cost"
+              value={costoTotal}
+              readOnly
+              tabIndex={-1}
+              aria-readonly="true"
+              style={{
+                ...estiloInput,
+                background: '#F1F5F9',
+                color: '#475569',
+              }}
+            />
             <select
               value={ubicacion}
               onChange={(e) => setUbicacion(e.target.value)}
@@ -849,11 +857,12 @@ export default function EntradasPage() {
 
                 <p style={estiloTextoChico}>
                   <strong>Costo unitario:</strong>{' '}
-                  {ultimaEntrada.costo_unitario ?? '—'}
+                  {formatoDosDecimales(ultimaEntrada.costo_unitario)}
                 </p>
 
                 <p style={estiloTextoChico}>
-                  <strong>Costo total:</strong> {ultimaEntrada.costo_total ?? '—'}
+                  <strong>Costo total:</strong>{' '}
+                  {formatoDosDecimales(ultimaEntrada.costo_total)}
                 </p>
               </div>
             )}
