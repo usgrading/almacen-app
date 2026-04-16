@@ -700,6 +700,13 @@ export default function EntradasPage() {
                   background: '#334155',
                   boxShadow: '0 4px 16px rgba(51, 65, 85, 0.35)',
                 }}
+                onClick={() => {
+                  if (!archivoFactura) {
+                    alert('Primero selecciona una factura');
+                    return;
+                  }
+                  console.log('Analizando factura...');
+                }}
               >
                 🤖 Analizar Factura
               </button>
