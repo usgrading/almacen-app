@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -14,6 +15,17 @@ import {
   buscarInventarioEntrada,
   obtenerOrganizacionParaEntrada,
 } from '@/lib/entrada-inventario';
+import {
+  construirStockNuevoPorProducto,
+  crearFilaVaciaEntradaItem,
+  filasEntradaDesdeAnalisisFactura,
+  type EntradaItemFila,
+} from '@/lib/entrada-item-fila';
+import {
+  guardarEntradaConItems,
+  parsearFilasEntradaParaGuardar,
+} from '@/lib/guardar-entrada-con-items';
+import { EntradaItemsSeccion } from '@/components/EntradaItemsSeccion';
 import { formatoDosDecimales } from '@/lib/format-money';
 import { CampoFormulario } from '@/components/CampoFormulario';
 import {
@@ -26,10 +38,7 @@ import {
   appTituloPagina,
 } from '@/lib/app-ui';
 import { subirImagenFacturaAlBucket } from '@/lib/subir-factura-storage';
-import {
-  solicitarAnalisisFactura,
-  type ItemFacturaAnalizado,
-} from '@/lib/analizar-factura-client';
+import { solicitarAnalisisFactura } from '@/lib/analizar-factura-client';
 import { fechaTextoAInputDate, totalTextoACostoTotal } from '@/lib/factura-campos-helpers';
 import {
   estiloInputFileOcultoMovil,
@@ -37,20 +46,20 @@ import {
   logFacturaMovil,
 } from '@/lib/factura-archivo-movil';
 
-type EntradaResumen = {
-  producto?: string | null;
-  cantidad?: number | null;
-  unidad?: string | null;
-  ubicacion?: string | null;
-  proveedor?: string | null;
-  numero_factura?: string | null;
-  costo_unitario?: number | null;
-  costo_total?: number | null;
+type EntradaItemResumen = {
+  producto: string | null;
+  cantidad: number | null;
+  unidad: string | null;
+  costo_unitario: number | null;
+  costo_total: number | null;
+  ubicacion: string | null;
 };
 
-type InventarioLookup = {
-  minimo?: number | null;
-  maximo?: number | null;
+type EntradaResumen = {
+  proveedor?: string | null;
+  numero_factura?: string | null;
+  costo_total_factura?: number | null;
+  entrada_items?: EntradaItemResumen[] | null;
 };
 
 export default function EntradasPage() {
@@ -65,18 +74,16 @@ export default function EntradasPage() {
   const [proveedor, setProveedor] = useState('');
   const [numeroFactura, setNumeroFactura] = useState('');
   const [fecha, setFecha] = useState('');
+  /** Total del documento (referencia, p. ej. OCR); no sustituye totales por línea. */
+  const [costoTotalFactura, setCostoTotalFactura] = useState('');
 
-  // Producto
-  const [producto, setProducto] = useState('');
-  const [cantidad, setCantidad] = useState('');
-  const [unidad, setUnidad] = useState('');
-  const [costoUnitario, setCostoUnitario] = useState('');
-  const [costoTotal, setCostoTotal] = useState('');
-  const [ubicacion, setUbicacion] = useState('');
+  const [filasItems, setFilasItems] = useState<EntradaItemFila[]>(() => [
+    crearFilaVaciaEntradaItem(),
+  ]);
   const [notas, setNotas] = useState('');
-  const [minimo, setMinimo] = useState('');
-  const [maximo, setMaximo] = useState('');
-  const [esPrimeraCaptura, setEsPrimeraCaptura] = useState<boolean | null>(null);
+  const [primeraCapturaPorProducto, setPrimeraCapturaPorProducto] = useState<
+    Record<string, boolean>
+  >({});
   const [validandoPrimeraCaptura, setValidandoPrimeraCaptura] = useState(false);
   /** undefined = aún cargando; null/string = listo para filtrar inventario por organización */
   const [orgIdPerfil, setOrgIdPerfil] = useState<string | null | undefined>(
@@ -90,11 +97,6 @@ export default function EntradasPage() {
   const refInputArchivoFactura = useRef<HTMLInputElement>(null);
   const refInputCamaraFactura = useRef<HTMLInputElement>(null);
   const [analizandoFactura, setAnalizandoFactura] = useState(false);
-  const [itemsFacturaAnalizados, setItemsFacturaAnalizados] = useState<
-    ItemFacturaAnalizado[]
-  >([]);
-  const [mostrarBloquePiezasDetectadas, setMostrarBloquePiezasDetectadas] =
-    useState(false);
 
   const aplicarArchivoFacturaDesde =
     (origenInput: 'galeria' | 'camara') =>
@@ -131,8 +133,7 @@ export default function EntradasPage() {
         return url;
       });
       setArchivoFactura(file);
-      setItemsFacturaAnalizados([]);
-      setMostrarBloquePiezasDetectadas(false);
+      setFilasItems([crearFilaVaciaEntradaItem()]);
       logFacturaMovil('mx', 'estado: archivoFactura actualizado');
       queueMicrotask(() => {
         input.value = '';
@@ -170,20 +171,14 @@ export default function EntradasPage() {
       const f = fechaTextoAInputDate(datos.fecha);
       if (f) setFecha(f);
       const tot = totalTextoACostoTotal(datos.total);
-      if (tot) setCostoTotal(tot);
-      setItemsFacturaAnalizados(datos.items ?? []);
-      setMostrarBloquePiezasDetectadas(true);
+      if (tot) setCostoTotalFactura(tot);
+      setFilasItems(filasEntradaDesdeAnalisisFactura(datos.items ?? []));
       console.log('[Entradas MX] Items detectados en factura:', datos.items);
     } catch {
       alert('No se pudo analizar la factura');
     } finally {
       setAnalizandoFactura(false);
     }
-  };
-
-  const estiloInput: CSSProperties = {
-    ...appInput,
-    marginBottom: 12,
   };
 
   const estiloInputCampo: CSSProperties = {
@@ -254,13 +249,6 @@ export default function EntradasPage() {
     fontWeight: 700,
   };
 
-  const estiloInputDeshabilitado: CSSProperties = {
-    ...estiloInput,
-    color: '#94a3b8',
-    background: '#f1f5f9',
-    cursor: 'not-allowed',
-  };
-
   const estiloTarjeta: CSSProperties = {
     background: '#f8fafc',
     padding: 16,
@@ -279,13 +267,21 @@ export default function EntradasPage() {
   const cargarUltimaEntrada = async () => {
     const { data, error } = await supabase
       .from('entradas')
-      .select('*')
+      .select(
+        `
+        id,
+        proveedor,
+        numero_factura,
+        costo_total_factura,
+        entrada_items ( producto, cantidad, unidad, costo_unitario, costo_total, ubicacion )
+      `
+      )
       .order('creado_en', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!error && data) {
-      setUltimaEntrada(data);
+      setUltimaEntrada(data as EntradaResumen);
     }
   };
 
@@ -304,15 +300,17 @@ export default function EntradasPage() {
     void obtenerOrganizacionParaEntrada(supabase).then(setOrgIdPerfil);
   }, []);
 
-  const convertirNumero = (valor: string) => {
-    if (!valor.trim()) return 0;
-    const numero = Number(valor);
-    return Number.isFinite(numero) ? numero : 0;
-  };
-
   const redondear2 = (valor: number) => {
     return Math.round(valor * 100) / 100;
   };
+
+  const firmaProductosItems = useMemo(() => {
+    return filasItems
+      .map((f) => f.producto.trim().toLowerCase())
+      .filter(Boolean)
+      .sort()
+      .join('|');
+  }, [filasItems]);
 
   const puedeRegistrar = rolListo && canMutate(appRole);
   const modoSoloLectura = rolListo && isViewer(appRole);
@@ -323,25 +321,16 @@ export default function EntradasPage() {
       return;
     }
 
-    if (!producto.trim()) {
-      alert('Escribe el nombre de pieza');
+    const parsed = parsearFilasEntradaParaGuardar(filasItems, redondear2);
+    if (!parsed.ok) {
+      alert(parsed.mensaje);
       return;
     }
 
-    if (!cantidad.trim()) {
-      alert('Escribe la cantidad');
-      return;
-    }
-
-    if (!unidad) {
-      alert('Selecciona la unidad');
-      return;
-    }
-
-    if (!ubicacion) {
-      alert('Selecciona la ubicación');
-      return;
-    }
+    const stockMap = construirStockNuevoPorProducto(
+      filasItems,
+      primeraCapturaPorProducto
+    );
 
     setCargando(true);
 
@@ -380,209 +369,42 @@ export default function EntradasPage() {
         logFacturaMovil('mx', 'guardar: sin archivoFactura (foto_factura null)');
       }
 
-      const productoNormalizado = producto.trim().toLowerCase();
+      const costoDocNum = Number(costoTotalFactura);
+      const costoFacturaRef =
+        costoTotalFactura.trim() && Number.isFinite(costoDocNum) && costoDocNum > 0
+          ? redondear2(costoDocNum)
+          : null;
 
-      const cantidadNum = convertirNumero(cantidad);
-      const costoUnitarioNum = convertirNumero(costoUnitario);
-      const costoTotalNum = convertirNumero(costoTotal);
+      const result = await guardarEntradaConItems({
+        supabase,
+        userId,
+        origen: 'MX',
+        proveedor,
+        numeroFactura,
+        fecha: fecha || null,
+        notas,
+        fotoFactura: fotoFacturaPublica,
+        costoTotalFactura: costoFacturaRef,
+        items: parsed.items,
+        stockNuevoPorProducto: stockMap,
+      });
 
-      if (cantidadNum <= 0) {
-        alert('La cantidad debe ser mayor a 0');
+      if (!result.ok) {
+        alert(result.mensaje);
         setCargando(false);
         return;
-      }
-
-      let costoUnitarioFinal = 0;
-      let costoTotalFinal = 0;
-
-      // Regla: cantidad × costo_unitario = costo_total (ambos con 2 decimales).
-      if (costoUnitarioNum > 0) {
-        costoUnitarioFinal = redondear2(costoUnitarioNum);
-        costoTotalFinal = redondear2(cantidadNum * costoUnitarioFinal);
-      } else if (costoTotalNum > 0) {
-        costoUnitarioFinal = redondear2(costoTotalNum / cantidadNum);
-        costoTotalFinal = redondear2(cantidadNum * costoUnitarioFinal);
-      }
-
-      const { data: nuevaEntrada, error: errorEntrada } = await supabase
-        .from('entradas')
-        .insert([
-          {
-            proveedor: proveedor.trim() || null,
-            numero_factura: numeroFactura.trim() || null,
-            fecha: fecha || null,
-            producto: productoNormalizado,
-            cantidad: cantidadNum,
-            unidad,
-            costo_unitario: costoUnitarioFinal > 0 ? costoUnitarioFinal : null,
-            costo_total: costoTotalFinal > 0 ? costoTotalFinal : null,
-            ubicacion,
-            notas: notas.trim() || null,
-            user_id: userId,
-            creado_por: userId,
-            foto_pieza: null,
-            foto_factura: fotoFacturaPublica,
-            origen: 'MX',
-          },
-        ])
-        .select()
-        .single();
-
-      if (errorEntrada) {
-        console.error('Error entrada:', errorEntrada);
-        alert('Error al guardar la entrada: ' + errorEntrada.message);
-        setCargando(false);
-        return;
-      }
-
-      const orgId = await obtenerOrganizacionParaEntrada(supabase);
-      if (!orgId) {
-        alert(
-          'La entrada se guardó, pero no se pudo actualizar el inventario: no hay organización asignada al perfil. Revisa tu sesión o contacta al administrador.'
-        );
-        setCargando(false);
-        return;
-      }
-
-      const { data: inventarioExistente, error: errorInventario } =
-        await buscarInventarioEntrada(
-          supabase,
-          productoNormalizado,
-          'MX',
-          orgId
-        );
-
-      if (errorInventario) {
-        console.error('Error inventario:', errorInventario);
-        alert('Error buscando inventario: ' + errorInventario.message);
-        setCargando(false);
-        return;
-      }
-
-      if (inventarioExistente) {
-        const cantidadAnterior = Number(inventarioExistente.cantidad_actual || 0);
-        const valorAnterior = Number(inventarioExistente.valor_inventario || 0);
-        const costoAnterior = Number(inventarioExistente.costo_unitario || 0);
-
-        const nuevaCantidad = redondear2(cantidadAnterior + cantidadNum);
-        const nuevoValorInventario = redondear2(valorAnterior + costoTotalFinal);
-
-        let nuevoCostoUnitario = costoAnterior;
-
-        if (nuevaCantidad > 0 && nuevoValorInventario > 0) {
-          nuevoCostoUnitario = redondear2(nuevoValorInventario / nuevaCantidad);
-        } else if (costoUnitarioFinal > 0) {
-          nuevoCostoUnitario = costoUnitarioFinal;
-        }
-
-        const { data: filasActualizadas, error: errorUpdate } = await supabase
-          .from('inventario')
-          .update({
-            cantidad_actual: nuevaCantidad,
-            unidad,
-            ubicacion,
-            origen: 'MX',
-            organization_id: orgId,
-            costo_unitario: nuevoCostoUnitario > 0 ? nuevoCostoUnitario : null,
-            valor_inventario:
-              nuevoValorInventario > 0 ? nuevoValorInventario : null,
-          })
-          .eq('id', inventarioExistente.id)
-          .select('id');
-
-        if (errorUpdate) {
-          console.error('Error update inventario:', errorUpdate);
-          alert('Error actualizando inventario: ' + errorUpdate.message);
-          setCargando(false);
-          return;
-        }
-        if (!filasActualizadas?.length) {
-          alert(
-            'La entrada se guardó, pero el inventario no se actualizó (sin filas afectadas). Suele deberse a permisos RLS o a organization_id en inventario.'
-          );
-          setCargando(false);
-          return;
-        }
-      } else {
-        const minimoNum = Number(minimo);
-        const maximoNum = Number(maximo);
-
-        if (!Number.isFinite(minimoNum) || minimoNum <= 0) {
-          alert('En primera captura debes seleccionar un mínimo válido');
-          setCargando(false);
-          return;
-        }
-
-        if (!Number.isFinite(maximoNum) || maximoNum <= 0) {
-          alert('En primera captura debes seleccionar un máximo válido');
-          setCargando(false);
-          return;
-        }
-
-        if (maximoNum < minimoNum) {
-          alert('El máximo debe ser mayor o igual al mínimo');
-          setCargando(false);
-          return;
-        }
-
-        const { data: filasInsertadas, error: errorInsert } = await supabase
-          .from('inventario')
-          .insert([
-            {
-              producto: productoNormalizado,
-              cantidad_actual: cantidadNum,
-              unidad,
-              ubicacion,
-              origen: 'MX',
-              organization_id: orgId,
-              costo_unitario: costoUnitarioFinal > 0 ? costoUnitarioFinal : null,
-              valor_inventario: costoTotalFinal > 0 ? costoTotalFinal : null,
-              minimo: minimoNum,
-              maximo: maximoNum,
-            },
-          ])
-          .select('id');
-
-        if (errorInsert) {
-          console.error('Error insert inventario:', errorInsert);
-          alert(
-            'La entrada se guardó, pero no se pudo crear el inventario: ' +
-              errorInsert.message
-          );
-          setCargando(false);
-          return;
-        }
-        if (!filasInsertadas?.length) {
-          alert(
-            'La entrada se guardó, pero no se creó fila en inventario (revisa permisos RLS o organization_id).'
-          );
-          setCargando(false);
-          return;
-        }
-      }
-
-      if (nuevaEntrada) {
-        setUltimaEntrada(nuevaEntrada);
       }
 
       setProveedor('');
       setNumeroFactura('');
       setFecha('');
-      setProducto('');
-      setCantidad('');
-      setUnidad('');
-      setCostoUnitario('');
-      setCostoTotal('');
-      setUbicacion('');
+      setCostoTotalFactura('');
+      setFilasItems([crearFilaVaciaEntradaItem()]);
       setNotas('');
-      setMinimo('');
-      setMaximo('');
-      setEsPrimeraCaptura(null);
+      setPrimeraCapturaPorProducto({});
 
       setArchivoFactura(null);
       setPreviewFacturaUrl(null);
-      setItemsFacturaAnalizados([]);
-      setMostrarBloquePiezasDetectadas(false);
       if (refInputArchivoFactura.current) refInputArchivoFactura.current.value = '';
       if (refInputCamaraFactura.current) refInputCamaraFactura.current.value = '';
 
@@ -597,72 +419,46 @@ export default function EntradasPage() {
   };
 
   useEffect(() => {
-  const cantidadNum = Number(cantidad);
-  const costoUnitarioNum = Number(costoUnitario);
-
-  if (
-    Number.isFinite(cantidadNum) &&
-    cantidadNum > 0 &&
-    Number.isFinite(costoUnitarioNum) &&
-    costoUnitarioNum > 0
-  ) {
-    const total = Math.round(cantidadNum * costoUnitarioNum * 100) / 100;
-    setCostoTotal(total.toFixed(2));
-  } else if (!costoUnitario.trim()) {
-    setCostoTotal('');
-  }
-}, [cantidad, costoUnitario]);
-
-  useEffect(() => {
-    const productoNormalizado = producto.trim().toLowerCase();
-
-    if (!productoNormalizado) {
-      setEsPrimeraCaptura(null);
-      setMinimo('');
-      setMaximo('');
+    if (orgIdPerfil === undefined) {
       return;
     }
 
-    if (orgIdPerfil === undefined) {
+    const productos = [
+      ...new Set(
+        filasItems.map((f) => f.producto.trim().toLowerCase()).filter(Boolean)
+      ),
+    ];
+
+    if (productos.length === 0) {
+      setPrimeraCapturaPorProducto({});
+      setValidandoPrimeraCaptura(false);
       return;
     }
 
     const timeout = setTimeout(async () => {
       setValidandoPrimeraCaptura(true);
+      const next: Record<string, boolean> = {};
 
-      const { data, error } = await buscarInventarioEntrada(
-        supabase,
-        productoNormalizado,
-        'MX',
-        orgIdPerfil
-      );
-
-      if (error) {
-        setEsPrimeraCaptura(null);
-        setValidandoPrimeraCaptura(false);
-        return;
+      for (const p of productos) {
+        const { data, error } = await buscarInventarioEntrada(
+          supabase,
+          p,
+          'MX',
+          orgIdPerfil
+        );
+        if (error) {
+          setValidandoPrimeraCaptura(false);
+          return;
+        }
+        next[p] = !data;
       }
 
-      if (data) {
-        const item = data as InventarioLookup;
-        setEsPrimeraCaptura(false);
-        setMinimo(
-          item.minimo !== null && item.minimo !== undefined ? String(item.minimo) : ''
-        );
-        setMaximo(
-          item.maximo !== null && item.maximo !== undefined ? String(item.maximo) : ''
-        );
-      } else {
-        setEsPrimeraCaptura(true);
-        setMinimo('');
-        setMaximo('');
-      }
-
+      setPrimeraCapturaPorProducto(next);
       setValidandoPrimeraCaptura(false);
-    }, 350);
+    }, 380);
 
     return () => clearTimeout(timeout);
-  }, [producto, orgIdPerfil]);
+  }, [firmaProductosItems, orgIdPerfil]);
 
   return (
     <main style={appFondoMain}>
@@ -843,70 +639,6 @@ export default function EntradasPage() {
                   <span>Sin imagen</span>
                 )}
               </div>
-
-              {mostrarBloquePiezasDetectadas ? (
-                <div
-                  style={{
-                    marginTop: 14,
-                    paddingTop: 12,
-                    borderTop: '1px solid #e2e8f0',
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: '0 0 10px 0',
-                      fontWeight: 700,
-                      fontSize: 15,
-                      color: '#0f172a',
-                    }}
-                  >
-                    Piezas detectadas
-                  </p>
-                  {itemsFacturaAnalizados.length === 0 ? (
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: 13,
-                        color: '#64748b',
-                      }}
-                    >
-                      No se detectaron conceptos en el detalle de la factura.
-                    </p>
-                  ) : (
-                    <ul
-                      style={{
-                        listStyle: 'none',
-                        margin: 0,
-                        padding: 0,
-                      }}
-                    >
-                      {itemsFacturaAnalizados.map((item, idx) => (
-                        <li
-                          key={`${idx}-${item.descripcion.slice(0, 20)}`}
-                          style={{
-                            borderBottom: '1px solid #e2e8f0',
-                            paddingBottom: 10,
-                            marginBottom: 10,
-                            fontSize: 13,
-                            color: '#334155',
-                          }}
-                        >
-                          <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                            {item.descripcion || '(Sin descripción)'}
-                          </div>
-                          <div style={{ color: '#64748b', lineHeight: 1.45 }}>
-                            Cantidad: {item.cantidad}
-                            {item.precio_unitario
-                              ? ` · P. unit.: ${item.precio_unitario}`
-                              : ''}
-                            {item.importe ? ` · Importe: ${item.importe}` : ''}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ) : null}
             </div>
 
             <CampoFormulario etiqueta="Proveedor" htmlFor="entrada-mx-proveedor">
@@ -939,7 +671,46 @@ export default function EntradasPage() {
                 style={estiloInputCampo}
               />
             </CampoFormulario>
+
+            <CampoFormulario
+              etiqueta="Total factura (referencia)"
+              htmlFor="entrada-mx-total-doc"
+            >
+              <div style={filaDineroTotal}>
+                <span style={prefijoDolarTotal} aria-hidden="true">
+                  $
+                </span>
+                <input
+                  id="entrada-mx-total-doc"
+                  className="app-input-field"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Opcional — total del documento"
+                  value={costoTotalFactura}
+                  onChange={(e) => setCostoTotalFactura(e.target.value)}
+                  style={inputDineroTotal}
+                />
+              </div>
+            </CampoFormulario>
           </div>
+
+          <EntradaItemsSeccion
+            prefijoIds="mx"
+            filas={filasItems}
+            setFilas={setFilasItems}
+            primeraCapturaPorProducto={primeraCapturaPorProducto}
+            validandoPrimeraCaptura={validandoPrimeraCaptura}
+            puedeRegistrar={puedeRegistrar}
+            estiloInputCampo={estiloInputCampo}
+            estiloTituloSeccion={estiloTituloSeccion}
+            filaDinero={filaDinero}
+            prefijoDolar={prefijoDolar}
+            inputDinero={inputDinero}
+            filaDineroTotal={filaDineroTotal}
+            prefijoDolarTotal={prefijoDolarTotal}
+            inputDineroTotal={inputDineroTotal}
+          />
 
           <div
             style={{
@@ -948,194 +719,6 @@ export default function EntradasPage() {
               marginTop: 12,
             }}
           >
-            <h4 style={estiloTituloSeccion}>Producto</h4>
-
-            <CampoFormulario etiqueta="Foto de pieza" htmlFor="entrada-mx-foto-pieza">
-              <input
-                id="entrada-mx-foto-pieza"
-                className="app-input-field"
-                disabled
-                style={{ ...estiloInputDeshabilitado, marginBottom: 0 }}
-              />
-            </CampoFormulario>
-
-            <CampoFormulario etiqueta="Nombre de pieza" htmlFor="entrada-mx-producto">
-              <input
-                id="entrada-mx-producto"
-                className="app-input-field"
-                value={producto}
-                onChange={(e) => setProducto(e.target.value)}
-                style={estiloInputCampo}
-              />
-            </CampoFormulario>
-
-            {validandoPrimeraCaptura && (
-              <p
-                style={{
-                  marginTop: -6,
-                  marginBottom: 10,
-                  color: '#64748B',
-                  fontSize: 13,
-                }}
-              >
-                Revisando si es primera captura...
-              </p>
-            )}
-
-            {esPrimeraCaptura && (
-              <>
-                <p
-                  style={{
-                    marginTop: -2,
-                    marginBottom: 8,
-                    color: '#1E40AF',
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  Primera captura: define stock mínimo y máximo
-                </p>
-
-                <CampoFormulario etiqueta="Stock mínimo" htmlFor="entrada-mx-minimo">
-                  <select
-                    id="entrada-mx-minimo"
-                    className="app-input-field"
-                    value={minimo}
-                    onChange={(e) => setMinimo(e.target.value)}
-                    style={estiloInputCampo}
-                  >
-                    <option value="">Selecciona</option>
-                    {Array.from({ length: 200 }, (_, i) => i + 1).map((n) => (
-                      <option key={`min-${n}`} value={String(n)}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </CampoFormulario>
-
-                <CampoFormulario etiqueta="Stock máximo" htmlFor="entrada-mx-maximo">
-                  <select
-                    id="entrada-mx-maximo"
-                    className="app-input-field"
-                    value={maximo}
-                    onChange={(e) => setMaximo(e.target.value)}
-                    style={estiloInputCampo}
-                  >
-                    <option value="">Selecciona</option>
-                    {Array.from({ length: 200 }, (_, i) => i + 1).map((n) => (
-                      <option key={`max-${n}`} value={String(n)}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </CampoFormulario>
-              </>
-            )}
-
-            <CampoFormulario etiqueta="Cantidad" htmlFor="entrada-mx-cantidad">
-              <input
-                id="entrada-mx-cantidad"
-                className="app-input-field"
-                type="text"
-                inputMode="numeric"
-                value={cantidad}
-                onChange={(e) =>
-                  setCantidad(e.target.value.replace(/[^0-9]/g, ''))
-                }
-                style={estiloInputCampo}
-              />
-            </CampoFormulario>
-
-            <CampoFormulario etiqueta="Unidad" htmlFor="entrada-mx-unidad">
-              <select
-                id="entrada-mx-unidad"
-                className="app-input-field"
-                value={unidad}
-                onChange={(e) => setUnidad(e.target.value)}
-                style={estiloInputCampo}
-              >
-                <option value="" disabled>
-                  Selecciona unidad
-                </option>
-                <option value="Pieza">Pieza</option>
-                <option value="Caja">Caja</option>
-                <option value="Litros">Litros</option>
-                <option value="Galones">Galones</option>
-                <option value="Kilos">Kilos</option>
-                <option value="Metros">Metros</option>
-                <option value="Paquete">Paquete</option>
-              </select>
-            </CampoFormulario>
-
-            <CampoFormulario etiqueta="Costo unitario" htmlFor="entrada-mx-costo-unit">
-              <div style={filaDinero}>
-                <span style={prefijoDolar} aria-hidden="true">
-                  $
-                </span>
-                <input
-                  id="entrada-mx-costo-unit"
-                  className="app-input-field"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={costoUnitario}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === '') {
-                      setCostoUnitario('');
-                      return;
-                    }
-                    setCostoUnitario(v);
-                  }}
-                  style={inputDinero}
-                />
-              </div>
-            </CampoFormulario>
-
-            <CampoFormulario etiqueta="Costo total" htmlFor="entrada-mx-costo-total">
-              <div style={filaDineroTotal}>
-                <span style={prefijoDolarTotal} aria-hidden="true">
-                  $
-                </span>
-                <input
-                  id="entrada-mx-costo-total"
-                  className="app-input-field"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Se calcula automáticamente"
-                  value={costoTotal}
-                  readOnly
-                  tabIndex={-1}
-                  aria-readonly="true"
-                  style={inputDineroTotal}
-                />
-              </div>
-            </CampoFormulario>
-
-            <CampoFormulario etiqueta="Ubicación" htmlFor="entrada-mx-ubicacion">
-              <select
-                id="entrada-mx-ubicacion"
-                className="app-input-field"
-                value={ubicacion}
-                onChange={(e) => setUbicacion(e.target.value)}
-                style={estiloInputCampo}
-              >
-                <option value="">Selecciona ubicación</option>
-                {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map((seccion) =>
-                  [1, 2, 3, 4].map((nivel) => {
-                    const valor = `${seccion}-${nivel}`;
-                    return (
-                      <option key={valor} value={valor}>
-                        {valor}
-                      </option>
-                    );
-                  })
-                )}
-              </select>
-            </CampoFormulario>
-
             <CampoFormulario etiqueta="Notas" htmlFor="entrada-mx-notas">
               <textarea
                 id="entrada-mx-notas"
@@ -1182,41 +765,51 @@ export default function EntradasPage() {
                   style={{
                     margin: 0,
                     fontWeight: 700,
-                    fontSize: 18,
+                    fontSize: 16,
                     color: '#1F2937',
                   }}
                 >
-                  {ultimaEntrada.producto}
+                  Última entrada
                 </p>
-
-                <p
-                  style={{
-                    margin: '6px 0 10px 0',
-                    color: '#475569',
-                    fontSize: 15,
-                  }}
-                >
-                  {ultimaEntrada.cantidad} {ultimaEntrada.unidad} -{' '}
-                  {ultimaEntrada.ubicacion}
-                </p>
-
-                <p style={estiloTextoChico}>
+                <p style={{ ...estiloTextoChico, marginTop: 8 }}>
                   <strong>Proveedor:</strong> {ultimaEntrada.proveedor || '—'}
                 </p>
-
                 <p style={estiloTextoChico}>
                   <strong>Factura:</strong> {ultimaEntrada.numero_factura || '—'}
                 </p>
-
                 <p style={estiloTextoChico}>
-                  <strong>Costo unitario:</strong>{' '}
-                  {formatoDosDecimales(ultimaEntrada.costo_unitario)}
+                  <strong>Total factura (ref.):</strong>{' '}
+                  {formatoDosDecimales(ultimaEntrada.costo_total_factura)}
                 </p>
-
-                <p style={estiloTextoChico}>
-                  <strong>Costo total:</strong>{' '}
-                  {formatoDosDecimales(ultimaEntrada.costo_total)}
-                </p>
+                <div style={{ marginTop: 12 }}>
+                  <p style={{ margin: '0 0 6px 0', fontWeight: 600, fontSize: 14 }}>
+                    Ítems
+                  </p>
+                  {(ultimaEntrada.entrada_items?.length ?? 0) === 0 ? (
+                    <p style={{ ...estiloTextoChico, margin: 0 }}>Sin renglones</p>
+                  ) : (
+                    <ul
+                      style={{
+                        margin: 0,
+                        paddingLeft: 18,
+                        color: '#334155',
+                        fontSize: 14,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {(ultimaEntrada.entrada_items ?? []).map((it, i) => (
+                        <li key={i}>
+                          <strong>{it.producto || '—'}</strong>
+                          {' · '}
+                          {it.cantidad ?? 0} {it.unidad || ''}
+                          {it.ubicacion ? ` · ${it.ubicacion}` : ''}
+                          {' · '}
+                          Total {formatoDosDecimales(it.costo_total)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             )}
           </div>

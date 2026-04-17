@@ -21,7 +21,9 @@ import { getUserRole, isAdmin } from '@/lib/roles';
 import { CampoFormulario } from '@/components/CampoFormulario';
 
 type Entrada = {
-  id: string | number;
+  /** id del renglón en `entrada_items` */
+  id: string;
+  entrada_id: string;
   producto: string | null;
   cantidad: number | null;
   unidad: string | null;
@@ -69,13 +71,48 @@ export default function ReporteEntradasPage() {
       try {
         setLoading(true);
         const { data, error } = await supabase
-          .from('entradas')
-          .select('id, producto, cantidad, unidad, origen, creado_en')
-          .order('creado_en', { ascending: false })
-          .limit(100);
+          .from('entrada_items')
+          .select(
+            `
+            id,
+            entrada_id,
+            producto,
+            cantidad,
+            unidad,
+            entradas ( origen, creado_en )
+          `
+          )
+          .limit(500);
 
         if (error) throw error;
-        setEntradas((data as Entrada[]) ?? []);
+
+        const raw = data ?? [];
+        const filas: Entrada[] = raw
+          .map((row: Record<string, unknown>) => {
+            const emb = row.entradas;
+            const cab =
+              emb && typeof emb === 'object'
+                ? Array.isArray(emb)
+                  ? (emb[0] as { origen?: string | null; creado_en?: string | null } | undefined)
+                  : (emb as { origen?: string | null; creado_en?: string | null })
+                : null;
+            return {
+              id: String(row.id ?? ''),
+              entrada_id: String(row.entrada_id ?? ''),
+              producto: (row.producto as string | null) ?? null,
+              cantidad: (row.cantidad as number | null) ?? null,
+              unidad: (row.unidad as string | null) ?? null,
+              origen: cab?.origen ?? null,
+              creado_en: cab?.creado_en ?? null,
+            };
+          })
+          .sort((a, b) => {
+            const ta = a.creado_en ? new Date(a.creado_en).getTime() : 0;
+            const tb = b.creado_en ? new Date(b.creado_en).getTime() : 0;
+            return tb - ta;
+          });
+
+        setEntradas(filas);
       } catch (error) {
         alert(error instanceof Error ? error.message : 'Error cargando entradas');
       } finally {
@@ -120,31 +157,35 @@ export default function ReporteEntradasPage() {
       setModalEliminar(false);
       return;
     }
-    const ids = Array.from(selected);
-    if (ids.length === 0) {
+    const idsItems = Array.from(selected);
+    if (idsItems.length === 0) {
       setModalEliminar(false);
       return;
     }
+
+    const filasSel = entradas.filter((e) => idsItems.includes(String(e.id)));
+    const idsCabecera = [...new Set(filasSel.map((e) => String(e.entrada_id)))];
+
     setEliminando(true);
     try {
       const tabla = 'entradas';
-      console.info('[reportes/entradas] Solicitando DELETE', {
+      console.info('[reportes/entradas] Solicitando DELETE cabeceras', {
         tabla,
-        ids,
-        cantidad: ids.length,
+        idsCabecera,
+        renglonesSeleccionados: idsItems.length,
       });
 
       const { data: filasBorradas, error } = await supabase
         .from(tabla)
         .delete()
-        .in('id', ids)
+        .in('id', idsCabecera)
         .select('id');
 
       console.info('[reportes/entradas] Respuesta DELETE', {
         tabla,
         error: error ?? null,
         filasDevueltas: filasBorradas?.length ?? 0,
-        idsConfirmados: filasBorradas?.map((r) => r.id) ?? [],
+        idsCabeceraBorrados: filasBorradas?.map((r) => r.id) ?? [],
       });
 
       if (error) {
@@ -156,24 +197,26 @@ export default function ReporteEntradasPage() {
         const msg =
           'No se eliminó ningún registro en la base de datos (tabla entradas). Suele deberse a permisos RLS o políticas de borrado. Revisa la consola para el detalle.';
         console.error('[reportes/entradas] DELETE sin filas afectadas', {
-          idsSolicitados: ids,
+          idsCabeceraSolicitados: idsCabecera,
         });
         alert(msg);
         return;
       }
 
-      const idsOk = new Set(filasBorradas.map((r) => String(r.id)));
-      if (filasBorradas.length < ids.length) {
+      if (filasBorradas.length < idsCabecera.length) {
         console.warn('[reportes/entradas] Borrado parcial', {
-          solicitados: ids.length,
+          solicitados: idsCabecera.length,
           borrados: filasBorradas.length,
         });
         alert(
-          `Solo se eliminaron ${filasBorradas.length} de ${ids.length} registros. El resto no se pudo borrar (permisos o datos).`
+          `Solo se eliminaron ${filasBorradas.length} de ${idsCabecera.length} entradas. El resto no se pudo borrar (permisos o datos).`
         );
       }
 
-      setEntradas((prev) => prev.filter((e) => !idsOk.has(String(e.id))));
+      const borrados = new Set(filasBorradas.map((r) => String(r.id)));
+      setEntradas((prev) =>
+        prev.filter((e) => !borrados.has(String(e.entrada_id)))
+      );
       clear();
       setModalEliminar(false);
     } catch (e) {
