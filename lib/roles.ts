@@ -3,11 +3,28 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /** Valores permitidos en `profiles.rol`. */
 export type AppRole = "admin" | "manager" | "viewer";
 
-export function normalizeRole(raw: string | null | undefined): AppRole {
-  const v = String(raw ?? "")
-    .trim()
-    .toLowerCase();
+export const APP_ROLES: readonly AppRole[] = ["admin", "manager", "viewer"];
+
+/** Solo rol válidos; null si falta o no coincide (APIs deben responder 400/403 en lugar de asumir viewer). */
+export function parseAppRole(input: unknown): AppRole | null {
+  if (input == null) return null;
+  if (typeof input !== "string") return null;
+  const v = input.trim().toLowerCase();
   if (v === "admin" || v === "manager" || v === "viewer") return v;
+  return null;
+}
+
+/**
+ * Lectura desde BD / UI: valores desconocidos se tratan como viewer.
+ * En desarrollo se advierte para detectar datos corruptos en `profiles.rol`.
+ */
+export function normalizeRole(raw: string | null | undefined): AppRole {
+  const parsed = parseAppRole(raw ?? null);
+  if (parsed) return parsed;
+  const v = String(raw ?? "").trim();
+  if (v.length > 0 && process.env.NODE_ENV === "development") {
+    console.warn("[roles] profiles.rol inesperado; usando viewer:", raw);
+  }
   return "viewer";
 }
 

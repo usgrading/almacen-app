@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { PageLogo } from "@/components/PageLogo";
 import { supabase } from "@/lib/supabase";
 import { ensureMiOrganizationId, getMiOrganizationId } from "@/lib/organization";
-import { getUserRole, isAdmin } from "@/lib/roles";
+import { getUserRole, isAdmin, parseAppRole } from "@/lib/roles";
 import { CampoFormulario } from "@/components/CampoFormulario";
 import {
   appBtnPrimario,
@@ -47,11 +47,16 @@ function mismoUuid(a: unknown, b: unknown): boolean {
 function mapProfileRow(row: Record<string, unknown>): Usuario | null {
   if (row.id === undefined || row.id === null) return null;
 
-  const rawRol = String(row.rol ?? "viewer").toLowerCase();
-
-  const rol: Rol = ["admin", "manager", "viewer"].includes(rawRol)
-    ? (rawRol as Rol)
-    : "viewer";
+  const parsed = parseAppRole(row.rol);
+  if (
+    process.env.NODE_ENV === "development" &&
+    parsed === null &&
+    row.rol != null &&
+    String(row.rol).trim() !== ""
+  ) {
+    console.warn("[usuarios] profiles.rol inválido para id", row.id, row.rol);
+  }
+  const rol: Rol = parsed ?? "viewer";
 
   const activo =
     row.activo === undefined || row.activo === null

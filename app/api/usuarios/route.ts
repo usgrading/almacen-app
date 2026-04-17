@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { uniqueProfileUsername } from "@/lib/profile-username";
-import { canManageUsers, normalizeRole } from "@/lib/roles";
-
-type Rol = "admin" | "manager" | "viewer";
+import { canManageUsers, parseAppRole } from "@/lib/roles";
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,7 +52,23 @@ export async function POST(req: NextRequest) {
       rol?: string | null;
     } | null;
 
-    const inviterRole = normalizeRole(inviterRow?.rol ?? null);
+    if (!inviterRow) {
+      return NextResponse.json(
+        { error: "No se encontró tu perfil (profiles)." },
+        { status: 403 }
+      );
+    }
+
+    const inviterRole = parseAppRole(inviterRow.rol);
+    if (inviterRole === null) {
+      return NextResponse.json(
+        {
+          error:
+            "Tu perfil no tiene un rol válido en profiles.rol. Contacta al administrador.",
+        },
+        { status: 403 }
+      );
+    }
     if (!canManageUsers(inviterRole)) {
       return NextResponse.json(
         { error: "Solo un administrador puede crear usuarios." },
@@ -62,11 +76,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const organizationId = inviterRow?.organization_id ?? inviter.id;
+    const organizationId = inviterRow.organization_id ?? inviter.id;
 
-    let rolFinal: Rol = "viewer";
-    if (rol === "admin" || rol === "manager" || rol === "viewer") {
-      rolFinal = rol;
+    if (rol === undefined || rol === null) {
+      return NextResponse.json(
+        { error: "Falta el campo rol (admin, manager o viewer)." },
+        { status: 400 }
+      );
+    }
+    const rolFinal = parseAppRole(rol);
+    if (rolFinal === null) {
+      return NextResponse.json(
+        { error: "El rol debe ser admin, manager o viewer." },
+        { status: 400 }
+      );
     }
 
     const { data: userData, error: userError } =
@@ -74,6 +97,9 @@ export async function POST(req: NextRequest) {
         email,
         password,
         email_confirm: true,
+        user_metadata: {
+          app_rol: rolFinal,
+        },
       });
 
     if (userError || !userData.user) {
@@ -93,6 +119,7 @@ export async function POST(req: NextRequest) {
         : emailStr;
     const usernameFinal = uniqueProfileUsername(handleBase, userId);
 
+    // `rol` explícito; el trigger + user_metadata.app_rol ya alinean; el upsert fija el perfil final.
     const { error: profileError } = await admin.from("profiles").upsert(
       {
         id: userId,

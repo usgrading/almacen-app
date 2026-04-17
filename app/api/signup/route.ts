@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
         email_confirm: true,
         user_metadata: {
           nombre,
+          app_rol: rolFinal,
         },
       });
 
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
     const userId = userData.user.id;
     const username = uniqueProfileUsername(email, userId);
 
-    // Crear profile real
+    // Fila en profiles: `rol` siempre en el payload (nunca confiar en DEFAULT de la BD).
     const { error: profileError } = await admin.from("profiles").upsert(
       {
         id: userId,

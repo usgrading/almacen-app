@@ -40,43 +40,67 @@ export default function DashboardPage() {
   const [esCel, setEsCel] = useState(false);
 
   useEffect(() => {
-  const checkUser = async () => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const checkUser = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (!session?.user) {
-        router.push('/login');
-        return;
+        console.log('[dashboard] session user:', session?.user);
+
+        if (!session?.user) {
+          router.push('/login');
+          return;
+        }
+
+        await ensureMiOrganizationId(supabase);
+
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('nombre, rol')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('[dashboard] profiles error:', profileError.message);
+        }
+
+        const row = (profileData as Profile | null) ?? null;
+
+        if (!row) {
+          console.warn('[dashboard] Usuario sin perfil en profiles', {
+            userId: session.user.id,
+            email: session.user.email,
+          });
+        }
+
+        const effectiveRol = normalizeRole(row?.rol ?? null);
+
+        console.log('[dashboard] profile row:', row);
+        console.log('[dashboard] raw rol:', row?.rol ?? null);
+        console.log('[dashboard] effective rol:', effectiveRol);
+
+        if (!effectiveRol) {
+          console.warn('[dashboard] Usuario sin rol válido', {
+            userId: session.user.id,
+            email: session.user.email,
+            profile: row,
+          });
+        }
+
+        const p: Profile | null = row
+          ? { nombre: row.nombre, rol: effectiveRol }
+          : null;
+
+        setProfile(p);
+        setAppRole(effectiveRol);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      await ensureMiOrganizationId(supabase);
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('nombre, rol')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('[dashboard] profiles:', profileError.message);
-      }
-
-      const row = (profileData as Profile | null) ?? null;
-      const effectiveRol = normalizeRole(row?.rol ?? null);
-      const p: Profile | null = row
-        ? { nombre: row.nombre, rol: effectiveRol }
-        : null;
-      setProfile(p);
-      setAppRole(effectiveRol);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  void checkUser();
-}, [router]);
+    void checkUser();
+  }, [router]);
 
   useEffect(() => {
     const revisarPantalla = () => {
@@ -261,8 +285,10 @@ const buttonStyle: CSSProperties = {
   fontSize: 16,
   fontWeight: 600,
   cursor: 'pointer',
-  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06)',
-  transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
+  boxShadow:
+    '0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06)',
+  transition:
+    'border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
 };
 
 const buttonContentStyle: CSSProperties = {
