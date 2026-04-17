@@ -5,19 +5,22 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { CampoFormulario } from '@/components/CampoFormulario';
 import {
-  MENSAJE_ERROR_PASSWORD,
-  validarPassword,
-} from '@/lib/validar-password';
-import {
   appBtnPrimario,
   appBtnPrimarioDisabled,
   appBtnSecundario,
   appCardNarrow,
   appFondoMainCentrado,
   appInput,
-  appMensajeError,
   appSubtituloPagina,
 } from '@/lib/app-ui';
+
+/** Base pública de la app (opcional). En Vercel: ej. https://almacen-app-three.vercel.app Si no va, se usa window.location.origin (correcto al abrir ya el sitio desplegado). */
+function baseUrlParaAuth(): string {
+  const desdeEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '');
+  if (desdeEnv) return desdeEnv;
+  if (typeof window !== 'undefined') return window.location.origin;
+  return '';
+}
 
 const tituloLogin = {
   margin: 0,
@@ -37,7 +40,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sesionVerificada, setSesionVerificada] = useState(false);
-  const [errorContraseña, setErrorContraseña] = useState('');
+  const [enviandoReset, setEnviandoReset] = useState(false);
 
   useEffect(() => {
     const verificarSesion = async () => {
@@ -51,6 +54,43 @@ export default function LoginPage() {
     void verificarSesion();
   }, [router]);
 
+  const solicitarResetPassword = async () => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      alert('Escribe tu correo arriba para enviarte el enlace de recuperación.');
+      return;
+    }
+
+    setEnviandoReset(true);
+    try {
+      console.log('[login] resetPasswordForEmail — email limpio:', cleanEmail);
+
+      const origin = baseUrlParaAuth();
+      const redirectTo = origin ? `${origin}/reset-password` : undefined;
+
+      const { data, error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo,
+      });
+
+      console.log('[login] resetPasswordForEmail — data:', data);
+      console.log('[login] resetPasswordForEmail — error:', error);
+
+      if (error) {
+        alert('No se pudo enviar el correo: ' + error.message);
+        return;
+      }
+
+      alert(
+        'Si ese correo está registrado, recibirás un enlace para restablecer la contraseña.'
+      );
+    } catch (err) {
+      console.error('[login] resetPasswordForEmail — excepción:', err);
+      alert('Ocurrió un error al solicitar la recuperación.');
+    } finally {
+      setEnviandoReset(false);
+    }
+  };
+
   const handleLogin = async () => {
     if (loading) return;
 
@@ -62,26 +102,36 @@ export default function LoginPage() {
       return;
     }
 
-    
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 
-    setErrorContraseña('');
+    console.log('[login] Supabase URL:', supabaseUrl);
+    console.log('[login] email limpio:', cleanEmail);
+    console.log('[login] longitud password:', cleanPassword.length);
 
     try {
       setLoading(true);
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPassword,
       });
+
+      console.log('[login] signInWithPassword — data:', data);
+      console.log('[login] signInWithPassword — error:', error);
 
       if (error) {
         alert('Error: ' + error.message);
         return;
       }
 
+      if (!data.session) {
+        alert('No se obtuvo sesión. Intenta de nuevo.');
+        return;
+      }
+
       router.push('/dashboard');
     } catch (err) {
-      console.error(err);
+      console.error('[login] signInWithPassword — excepción:', err);
       alert('Ocurrió un error inesperado');
     } finally {
       setLoading(false);
@@ -150,7 +200,7 @@ export default function LoginPage() {
           <CampoFormulario
             etiqueta="Contraseña"
             htmlFor="login-password"
-            margenInferior={errorContraseña ? 6 : 16}
+            margenInferior={16}
           >
             <div style={{ position: 'relative' }}>
               <input
@@ -159,10 +209,7 @@ export default function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (errorContraseña) setErrorContraseña('');
-                }}
+                onChange={(e) => setPassword(e.target.value)}
                 style={{
                   ...appInput,
                   paddingRight: 48,
@@ -230,20 +277,29 @@ export default function LoginPage() {
             </div>
           </CampoFormulario>
 
-          {errorContraseña ? (
-            <p role="alert" style={appMensajeError}>
-              {errorContraseña}
-            </p>
-          ) : null}
-
           <button
             type="button"
             className="app-btn-primario"
-            onClick={handleLogin}
+            onClick={() => void handleLogin()}
             disabled={loading}
             style={loading ? appBtnPrimarioDisabled : appBtnPrimario}
           >
             {loading ? 'Entrando...' : 'Entrar'}
+          </button>
+
+          <button
+            type="button"
+            className="app-btn-secundario"
+            onClick={() => void solicitarResetPassword()}
+            disabled={loading || enviandoReset}
+            style={{
+              ...appBtnSecundario,
+              marginTop: 10,
+              fontSize: 14,
+              opacity: loading || enviandoReset ? 0.6 : 1,
+            }}
+          >
+            {enviandoReset ? 'Enviando...' : '¿Olvidaste tu contraseña?'}
           </button>
 
           <button
