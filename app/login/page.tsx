@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import { CampoFormulario } from '@/components/CampoFormulario';
 import {
   MENSAJE_ERROR_PASSWORD,
@@ -18,11 +18,6 @@ import {
   appMensajeError,
   appSubtituloPagina,
 } from '@/lib/app-ui';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-);
 
 const tituloLogin = {
   margin: 0,
