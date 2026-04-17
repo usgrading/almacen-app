@@ -41,7 +41,7 @@ import { subirImagenFacturaAlBucket } from '@/lib/subir-factura-storage';
 import { solicitarAnalisisFactura } from '@/lib/analizar-factura-client';
 import { fechaTextoAInputDate, totalTextoACostoTotal } from '@/lib/factura-campos-helpers';
 import {
-  estiloInputFileOcultoMovil,
+  estiloInputFileOverlayBoton,
   esProbableImagenFactura,
   logFacturaMovil,
 } from '@/lib/factura-archivo-movil';
@@ -102,6 +102,7 @@ export default function EntradasPage() {
     (origenInput: 'galeria' | 'camara') =>
     (e: ChangeEvent<HTMLInputElement>) => {
       const input = e.currentTarget;
+      logFacturaMovil('mx', 'DEBUG: onChange handler', { origenInput });
       logFacturaMovil('mx', 'onChange', { origenInput });
       const list = input.files;
       if (!list || list.length === 0) {
@@ -314,6 +315,15 @@ export default function EntradasPage() {
 
   const puedeRegistrar = rolListo && canMutate(appRole);
   const modoSoloLectura = rolListo && isViewer(appRole);
+  const uploadFacturaBloqueado =
+    !puedeRegistrar || cargando || analizandoFactura;
+
+  useEffect(() => {
+    logFacturaMovil('mx', 'DEBUG: refs input file tras montaje', {
+      refGaleria: Boolean(refInputArchivoFactura.current),
+      refCamara: Boolean(refInputCamaraFactura.current),
+    });
+  }, []);
 
   const handleSubmit = async () => {
     if (!puedeRegistrar) {
@@ -525,66 +535,97 @@ export default function EntradasPage() {
             <div style={{ marginBottom: 16, position: 'relative' }}>
               <p style={{ marginBottom: 8, fontWeight: 600 }}>Foto de factura</p>
 
-              <input
-                ref={refInputArchivoFactura}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/*"
-                multiple={false}
-                style={estiloInputFileOcultoMovil}
-                tabIndex={-1}
-                aria-hidden
-                onChange={aplicarArchivoFacturaDesde('galeria')}
-              />
-              <input
-                ref={refInputCamaraFactura}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/*"
-                multiple={false}
-                capture="environment"
-                style={estiloInputFileOcultoMovil}
-                tabIndex={-1}
-                aria-hidden
-                onChange={aplicarArchivoFacturaDesde('camara')}
-              />
-
               <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                <button
-                  type="button"
-                  className="app-btn-primario"
-                  disabled={!puedeRegistrar || cargando || analizandoFactura}
+                <div
                   style={{
-                    ...appBtnPrimario,
                     flex: 1,
-                    width: 'auto',
                     minWidth: 0,
-                    padding: '12px 14px',
-                  }}
-                  onClick={() => {
-                    logFacturaMovil('mx', 'click Subir Factura');
-                    refInputArchivoFactura.current?.click();
+                    position: 'relative',
+                    ...(uploadFacturaBloqueado
+                      ? { opacity: 0.65, pointerEvents: 'none' as const }
+                      : {}),
                   }}
                 >
-                  Subir Factura
-                </button>
+                  <button
+                    type="button"
+                    className="app-btn-primario"
+                    disabled={uploadFacturaBloqueado}
+                    tabIndex={-1}
+                    style={{
+                      ...appBtnPrimario,
+                      width: '100%',
+                      padding: '12px 14px',
+                      position: 'relative',
+                      zIndex: 0,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    Subir Factura
+                  </button>
+                  <input
+                    ref={refInputArchivoFactura}
+                    id="entrada-mx-file-galeria"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/*"
+                    multiple={false}
+                    disabled={uploadFacturaBloqueado}
+                    aria-label="Subir factura desde archivos"
+                    style={estiloInputFileOverlayBoton}
+                    onChange={aplicarArchivoFacturaDesde('galeria')}
+                    onClick={() => {
+                      logFacturaMovil('mx', 'DEBUG: clic en input file galería (overlay)');
+                      logFacturaMovil('mx', 'DEBUG: ref galería en click', {
+                        refNoNulo: Boolean(refInputArchivoFactura.current),
+                      });
+                    }}
+                  />
+                </div>
 
-                <button
-                  type="button"
-                  className="app-btn-primario"
-                  disabled={!puedeRegistrar || cargando || analizandoFactura}
+                <div
                   style={{
-                    ...appBtnPrimario,
                     flex: 1,
-                    width: 'auto',
                     minWidth: 0,
-                    padding: '12px 14px',
-                  }}
-                  onClick={() => {
-                    logFacturaMovil('mx', 'click Tomar Foto');
-                    refInputCamaraFactura.current?.click();
+                    position: 'relative',
+                    ...(uploadFacturaBloqueado
+                      ? { opacity: 0.65, pointerEvents: 'none' as const }
+                      : {}),
                   }}
                 >
-                  Tomar Foto
-                </button>
+                  <button
+                    type="button"
+                    className="app-btn-primario"
+                    disabled={uploadFacturaBloqueado}
+                    tabIndex={-1}
+                    style={{
+                      ...appBtnPrimario,
+                      width: '100%',
+                      padding: '12px 14px',
+                      position: 'relative',
+                      zIndex: 0,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    Tomar Foto
+                  </button>
+                  <input
+                    ref={refInputCamaraFactura}
+                    id="entrada-mx-file-camara"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/*"
+                    multiple={false}
+                    capture="environment"
+                    disabled={uploadFacturaBloqueado}
+                    aria-label="Tomar foto de factura con la cámara"
+                    style={estiloInputFileOverlayBoton}
+                    onChange={aplicarArchivoFacturaDesde('camara')}
+                    onClick={() => {
+                      logFacturaMovil('mx', 'DEBUG: clic en input file cámara (overlay)');
+                      logFacturaMovil('mx', 'DEBUG: ref cámara en click', {
+                        refNoNulo: Boolean(refInputCamaraFactura.current),
+                      });
+                    }}
+                  />
+                </div>
               </div>
 
               <button

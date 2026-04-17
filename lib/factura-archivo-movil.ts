@@ -48,6 +48,26 @@ export const estiloInputFileOcultoMovil: CSSProperties = {
 };
 
 /**
+ * Input file encima del botón visible: el usuario hace clic directamente en el input.
+ * Así el selector de archivos se abre en desktop y móvil sin depender de `input.click()` programático
+ * (que muchos navegadores bloquean si el input tiene tamaño 0 / clip).
+ */
+export const estiloInputFileOverlayBoton: CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  top: 0,
+  width: '100%',
+  height: '100%',
+  opacity: 0,
+  cursor: 'pointer',
+  zIndex: 2,
+  margin: 0,
+  padding: 0,
+  border: 0,
+  fontSize: 16,
+};
+
+/**
  * iOS a veces devuelve MIME vacío en fotos desde cámara; HEIC puede no llevar type estándar.
  */
 export function esProbableImagenFactura(
