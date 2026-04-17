@@ -1,7 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logFacturaStorage } from '@/lib/factura-archivo-movil';
+import { isSupabaseEnvConfigured } from '@/lib/supabase';
 
 const BUCKET_FACTURAS = 'facturas';
+
+/**
+ * Políticas esperadas en Supabase (Storage → facturas), para que el upload del cliente funcione:
+ * - INSERT en storage.objects: usuarios autenticados, bucket `facturas`, ruta bajo `auth.uid()/...`
+ *   Ejemplo (ajusta nombres): policy con check (bucket_id = 'facturas' AND auth.role() = 'authenticated')
+ * - SELECT público solo si usas getPublicUrl (bucket puede ser público o policy de lectura acorde).
+ * Si el bucket no existe o el rol no puede insertar, el SDK devuelve error en `error.message`, no "Failed to fetch".
+ */
 
 function extensionDesdeArchivo(file: File): string {
   const fromName = file.name.split('.').pop()?.toLowerCase();
@@ -44,6 +53,15 @@ export type SubirFacturaResult = { url: string } | { error: string };
  * Sube una imagen al bucket público "facturas" y devuelve la URL pública.
  * Ruta: `{userId}/{timestamp}-{random}.{ext}`
  */
+function mensajeFalloRed(causa: unknown): string {
+  const base =
+    'No se pudo conectar con el almacenamiento. Revisa: 1) Variables NEXT_PUBLIC_SUPABASE_URL y clave anónima en .env.local / el hosting. 2) Red y que la URL del proyecto sea correcta. 3) En Supabase: bucket «facturas», políticas de INSERT para usuarios autenticados y ruta bajo tu user id.';
+  if (causa instanceof Error && causa.message) {
+    return `${base} (detalle técnico: ${causa.message})`;
+  }
+  return base;
+}
+
 export async function subirImagenFacturaAlBucket(
   supabase: SupabaseClient,
   file: File
@@ -53,6 +71,14 @@ export async function subirImagenFacturaAlBucket(
     tipo: file.type || '(vacío)',
     tamaño: file.size,
   });
+
+  if (!isSupabaseEnvConfigured) {
+    logFacturaStorage('abortado: env Supabase incompleto');
+    return {
+      error:
+        'Configuración incompleta: faltan NEXT_PUBLIC_SUPABASE_URL o la clave anónima de Supabase. Revisa .env.local y reinicia el servidor de desarrollo.',
+    };
+  }
 
   if (!esSubibleComoImagen(file)) {
     logFacturaStorage('rechazado: no parece imagen');
@@ -70,12 +96,22 @@ export async function subirImagenFacturaAlBucket(
   const path = `${userId}/${Date.now()}-${random}.${ext}`;
   const contentType = contentTypeParaUpload(file, ext);
 
-  const { data, error } = await supabase.storage
-    .from(BUCKET_FACTURAS)
-    .upload(path, file, {
+  let data: { path: string } | null = null;
+  let error: { message: string } | null = null;
+
+  try {
+    const res = await supabase.storage.from(BUCKET_FACTURAS).upload(path, file, {
       contentType,
       upsert: false,
     });
+    data = res.data;
+    error = res.error;
+  } catch (err) {
+    logFacturaStorage('error fetch', {
+      mensaje: err instanceof Error ? err.message : String(err),
+    });
+    return { error: mensajeFalloRed(err) };
+  }
 
   if (error) {
     logFacturaStorage('error', { mensaje: error.message });
@@ -84,9 +120,16 @@ export async function subirImagenFacturaAlBucket(
     };
   }
 
+  if (!data?.path) {
+    logFacturaStorage('error', { mensaje: 'respuesta sin path' });
+    return { error: 'La subida no devolvió una ruta válida.' };
+  }
+
+  const uploadedPath = data.path;
+
   const { data: urlData } = supabase.storage
     .from(BUCKET_FACTURAS)
-    .getPublicUrl(data.path);
+    .getPublicUrl(uploadedPath);
 
   const publicUrl = urlData?.publicUrl;
   if (!publicUrl) {
