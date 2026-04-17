@@ -17,12 +17,17 @@ import {
   appInput,
   appMensajeError,
   appSubtituloPagina,
-  appTituloPagina,
 } from '@/lib/app-ui';
 
-const tituloSignup = {
-  ...appTituloPagina,
-  fontSize: 'clamp(1.35rem, 3.8vw, 1.6rem)',
+/** Misma jerarquía visual que `/login` (logo + título + subtítulo). */
+const tituloSignupCard = {
+  margin: 0,
+  textAlign: 'center' as const,
+  fontSize: 'clamp(1.5rem, 4.2vw, 1.75rem)',
+  fontWeight: 700,
+  letterSpacing: '-0.03em',
+  color: '#0f172a',
+  lineHeight: 1.2,
 };
 
 export default function SignupPage() {
@@ -89,6 +94,12 @@ export default function SignupPage() {
         throw new Error(result?.error || 'No se pudo crear la cuenta.');
       }
 
+      if (result.esPrimerUsuario === false) {
+        alert(
+          'Tu cuenta queda como usuario estándar. Solo la primera cuenta registrada en esta base de datos es administradora (si ya creaste una desde otro dispositivo o entorno, las siguientes son usuario). Un administrador puede cambiar tu rol en Usuarios.'
+        );
+      }
+
       const emailLogin = email.trim().toLowerCase();
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: emailLogin,
@@ -123,7 +134,14 @@ export default function SignupPage() {
   return (
     <main style={appFondoMainCentrado}>
       <div style={appCardNarrow}>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            marginBottom: 4,
+          }}
+        >
           <img
             src="/logo.png"
             alt="Logo"
@@ -131,22 +149,21 @@ export default function SignupPage() {
               width: 96,
               height: 96,
               objectFit: 'contain',
-              marginBottom: 8,
+              marginBottom: 6,
             }}
           />
+          <h1 style={tituloSignupCard}>Crear cuenta</h1>
+          <p
+            style={{
+              ...appSubtituloPagina,
+              maxWidth: 280,
+            }}
+          >
+            Registra un nuevo usuario
+          </p>
         </div>
 
-        <h1 style={tituloSignup}>Crear cuenta</h1>
-
-        <p
-          style={{
-            ...appSubtituloPagina,
-            marginBottom: 22,
-          }}
-        >
-          Registra un nuevo usuario
-        </p>
-
+        <div style={{ marginTop: 22 }}>
         <CampoFormulario etiqueta="Nombre" htmlFor="signup-nombre" margenInferior={10}>
           <input
             id="signup-nombre"
@@ -288,6 +305,7 @@ export default function SignupPage() {
         >
           Ya tengo cuenta
         </button>
+        </div>
       </div>
     </main>
   );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { contarUsuariosAuth } from "@/lib/auth-admin-count";
 import { uniqueProfileUsername } from "@/lib/profile-username";
 
 type Body = {
@@ -40,8 +41,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Contar perfiles existentes
-    const { count, error: countError } = await admin
+    const { count: profileCount, error: countError } = await admin
       .from("profiles")
       .select("*", { count: "exact", head: true });
 
@@ -49,7 +49,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: countError.message }, { status: 500 });
     }
 
-    const esPrimerUsuario = (count ?? 0) === 0;
+    const authTotal = await contarUsuariosAuth(admin);
+    if (authTotal === null) {
+      return NextResponse.json(
+        {
+          error:
+            "No se pudo verificar usuarios existentes en el servidor. Intenta de nuevo en un momento.",
+        },
+        { status: 503 }
+      );
+    }
+
+    const perfiles = profileCount ?? 0;
+    /** Admin solo si no hay nadie en Auth ni en profiles (misma regla en móvil y escritorio). */
+    const esPrimerUsuario = perfiles === 0 && authTotal === 0;
     const rolFinal = esPrimerUsuario ? "admin" : "viewer";
 
     // Crear usuario en auth
