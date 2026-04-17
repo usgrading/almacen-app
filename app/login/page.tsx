@@ -54,23 +54,27 @@ export default function LoginPage() {
   const handleLogin = async () => {
     if (loading) return;
 
-    if (!email || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password;
+
+    if (!cleanEmail || !cleanPassword) {
       alert('Llena correo y contraseña');
       return;
     }
 
-    if (!validarPassword(password)) {
+    if (!validarPassword(cleanPassword)) {
       setErrorContraseña(MENSAJE_ERROR_PASSWORD);
       return;
     }
+
     setErrorContraseña('');
 
     try {
       setLoading(true);
 
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: cleanEmail,
+        password: cleanPassword,
       });
 
       if (error) {
