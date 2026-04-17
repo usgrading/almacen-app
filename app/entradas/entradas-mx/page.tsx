@@ -58,7 +58,7 @@ type EntradaItemResumen = {
 type EntradaResumen = {
   proveedor?: string | null;
   numero_factura?: string | null;
-  costo_total_factura?: number | null;
+  costo_total?: number | null;
   entrada_items?: EntradaItemResumen[] | null;
 };
 
@@ -272,7 +272,7 @@ export default function EntradasPage() {
         id,
         proveedor,
         numero_factura,
-        costo_total_factura,
+        costo_total,
         entrada_items ( producto, cantidad, unidad, costo_unitario, costo_total, ubicacion )
       `
       )
@@ -779,7 +779,7 @@ export default function EntradasPage() {
                 </p>
                 <p style={estiloTextoChico}>
                   <strong>Total factura (ref.):</strong>{' '}
-                  {formatoDosDecimales(ultimaEntrada.costo_total_factura)}
+                  {formatoDosDecimales(ultimaEntrada.costo_total)}
                 </p>
                 <div style={{ marginTop: 12 }}>
                   <p style={{ margin: '0 0 6px 0', fontWeight: 600, fontSize: 14 }}>
