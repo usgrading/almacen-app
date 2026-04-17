@@ -13,6 +13,13 @@ const supabaseAnonKey = (
  */
 export const isSupabaseEnvConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
+// 👇 DEBUG (NO BORRAR TODAVÍA)
+if (typeof window !== "undefined") {
+  console.log("SUPA URL:", supabaseUrl);
+  console.log("SUPA KEY LENGTH:", supabaseAnonKey?.length);
+  console.log("SUPA CONFIG OK:", isSupabaseEnvConfigured);
+}
+
 const fallbackUrl = "https://placeholder.supabase.co";
 const fallbackKey =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDI4OTY3OTksImV4cCI6MTk1ODQ2Njc5OX0.placeholder";
