@@ -53,15 +53,23 @@ export default function DashboardPage() {
 
       await ensureMiOrganizationId(supabase);
 
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('nombre, rol')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
 
-      const p = (profileData as Profile | null) ?? null;
+      if (profileError) {
+        console.error('[dashboard] profiles:', profileError.message);
+      }
+
+      const row = (profileData as Profile | null) ?? null;
+      const effectiveRol = normalizeRole(row?.rol ?? null);
+      const p: Profile | null = row
+        ? { nombre: row.nombre, rol: effectiveRol }
+        : null;
       setProfile(p);
-      setAppRole(normalizeRole(p?.rol ?? null));
+      setAppRole(effectiveRol);
     } finally {
       setLoading(false);
     }

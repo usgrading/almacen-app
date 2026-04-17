@@ -12,7 +12,7 @@ export function normalizeRole(raw: string | null | undefined): AppRole {
 }
 
 /**
- * Rol efectivo del usuario autenticado (solo `profiles.rol`).
+ * Rol efectivo del usuario autenticado (`profiles.rol`).
  */
 export async function getUserRole(client: SupabaseClient): Promise<AppRole | null> {
   const {
