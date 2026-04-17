@@ -62,10 +62,7 @@ export default function LoginPage() {
       return;
     }
 
-    if (!validarPassword(cleanPassword)) {
-      setErrorContraseña(MENSAJE_ERROR_PASSWORD);
-      return;
-    }
+    
 
     setErrorContraseña('');
 
