@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/** `profiles.organization_id` identifica la organización (UUID en tabla `organizations` tras signup público). */
+
 export async function getMiOrganizationId(
   client: SupabaseClient
 ): Promise<string | null> {

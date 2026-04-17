@@ -98,9 +98,6 @@ export default function UsuariosPage() {
   const [password, setPassword] = useState("");
   const [rol, setRol] = useState<Rol>("viewer");
 
-  const esPrimerUsuario = usuarios.length === 0;
-  const rolMostrado: Rol = esPrimerUsuario ? "admin" : rol;
-
   const canSubmit = useMemo(() => {
     return (
       nombre.trim().length > 0 &&
@@ -243,7 +240,7 @@ export default function UsuariosPage() {
           email: email.trim(),
           username: username.trim(),
           password,
-          rol: rolMostrado,
+          rol,
         }),
       });
 
@@ -389,12 +386,11 @@ export default function UsuariosPage() {
                 style={{
                   ...styles.input,
                   marginBottom: 0,
-                  backgroundColor: esPrimerUsuario ? "#eef2ff" : "#f8fafc",
-                  fontWeight: esPrimerUsuario ? 700 : 400,
+                  backgroundColor: "#f8fafc",
+                  fontWeight: 400,
                 }}
-                value={rolMostrado}
+                value={rol}
                 onChange={(e) => setRol(e.target.value as Rol)}
-                disabled={esPrimerUsuario}
               >
                 <option value="admin">admin</option>
                 <option value="manager">manager</option>
@@ -402,12 +398,6 @@ export default function UsuariosPage() {
               </select>
             </CampoFormulario>
           </div>
-
-          {esPrimerUsuario && (
-            <p style={styles.firstUserHint}>
-              Este será el primer usuario de la organización y se creará automáticamente como admin.
-            </p>
-          )}
 
           <button
             type="submit"
@@ -585,12 +575,6 @@ const styles: Record<string, CSSProperties> = {
     margin: "0 0 14px 0",
     fontSize: "13px",
     color: "#64748b",
-  },
-  firstUserHint: {
-    margin: "0 0 12px 0",
-    fontSize: "13px",
-    color: "#1e40af",
-    fontWeight: 600,
   },
   tableWrapper: {
     overflowX: "auto",

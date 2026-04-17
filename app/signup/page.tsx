@@ -94,12 +94,6 @@ export default function SignupPage() {
         throw new Error(result?.error || 'No se pudo crear la cuenta.');
       }
 
-      if (result.esPrimerUsuario === false) {
-        alert(
-          'Tu cuenta queda como usuario estándar. Solo la primera cuenta registrada en esta base de datos es administradora (si ya creaste una desde otro dispositivo o entorno, las siguientes son usuario). Un administrador puede cambiar tu rol en Usuarios.'
-        );
-      }
-
       const emailLogin = email.trim().toLowerCase();
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: emailLogin,

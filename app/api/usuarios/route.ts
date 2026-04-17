@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
         email_confirm: true,
         user_metadata: {
           app_rol: rolFinal,
+          app_organization_id: organizationId,
         },
       });
 

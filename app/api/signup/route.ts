@@ -1,6 +1,6 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { contarUsuariosAuth } from "@/lib/auth-admin-count";
 import { uniqueProfileUsername } from "@/lib/profile-username";
 
 type Body = {
@@ -41,31 +41,25 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const { count: profileCount, error: countError } = await admin
-      .from("profiles")
-      .select("*", { count: "exact", head: true });
+    const organizationId = randomUUID();
 
-    if (countError) {
-      return NextResponse.json({ error: countError.message }, { status: 500 });
-    }
+    const { error: orgError } = await admin.from("organizations").insert({
+      id: organizationId,
+    });
 
-    const authTotal = await contarUsuariosAuth(admin);
-    if (authTotal === null) {
+    if (orgError) {
       return NextResponse.json(
         {
           error:
-            "No se pudo verificar usuarios existentes en el servidor. Intenta de nuevo en un momento.",
+            orgError.message +
+            " (¿aplicaste la migración que crea la tabla organizations?)",
         },
-        { status: 503 }
+        { status: 500 }
       );
     }
 
-    const perfiles = profileCount ?? 0;
-    /** Admin solo si no hay nadie en Auth ni en profiles (misma regla en móvil y escritorio). */
-    const esPrimerUsuario = perfiles === 0 && authTotal === 0;
-    const rolFinal = esPrimerUsuario ? "admin" : "viewer";
+    const rolFinal = "admin" as const;
 
-    // Crear usuario en auth
     const { data: userData, error: userError } =
       await admin.auth.admin.createUser({
         email,
@@ -74,10 +68,12 @@ export async function POST(req: NextRequest) {
         user_metadata: {
           nombre,
           app_rol: rolFinal,
+          app_organization_id: organizationId,
         },
       });
 
     if (userError || !userData.user) {
+      await admin.from("organizations").delete().eq("id", organizationId);
       const raw = userError?.message ?? "No se pudo crear el usuario.";
       const hint =
         raw.toLowerCase().includes("database error saving new user")
@@ -89,11 +85,10 @@ export async function POST(req: NextRequest) {
     const userId = userData.user.id;
     const username = uniqueProfileUsername(email, userId);
 
-    // Fila en profiles: `rol` siempre en el payload (nunca confiar en DEFAULT de la BD).
     const { error: profileError } = await admin.from("profiles").upsert(
       {
         id: userId,
-        organization_id: userId,
+        organization_id: organizationId,
         nombre,
         email,
         username,
@@ -108,13 +103,14 @@ export async function POST(req: NextRequest) {
 
     if (profileError) {
       await admin.auth.admin.deleteUser(userId);
+      await admin.from("organizations").delete().eq("id", organizationId);
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
 
     return NextResponse.json({
       ok: true,
       rol: rolFinal,
-      esPrimerUsuario,
+      organizationId,
     });
   } catch (error) {
     const message =
