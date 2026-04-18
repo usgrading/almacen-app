@@ -189,17 +189,21 @@ export async function guardarEntradaConItems(params: {
 
   const entradaId = entradaRow.id as string;
 
-  const filasDetalle = items.map((it, index) => ({
-    entrada_id: entradaId,
-    producto: it.productoNormalizado,
-    cantidad: it.cantidad,
-    unidad: it.unidad,
-    costo_unitario: it.costoUnitarioFinal > 0 ? it.costoUnitarioFinal : null,
-    costo_total: it.costoTotalFinal > 0 ? it.costoTotalFinal : null,
-    ubicacion: it.ubicacion,
-    foto_pieza: null,
-    order: index,
-  }));
+  /** Clave columna PG `"order"` vía string: evita confusiones con palabra reservada y con payloads viejos `orden`. */
+  const filasDetalle: Record<string, unknown>[] = items.map((it, index) => {
+    const row: Record<string, unknown> = {
+      entrada_id: entradaId,
+      producto: it.productoNormalizado,
+      cantidad: it.cantidad,
+      unidad: it.unidad,
+      costo_unitario: it.costoUnitarioFinal > 0 ? it.costoUnitarioFinal : null,
+      costo_total: it.costoTotalFinal > 0 ? it.costoTotalFinal : null,
+      ubicacion: it.ubicacion,
+      foto_pieza: null,
+    };
+    row['order'] = index;
+    return row;
+  });
 
   console.log(
     '[guardar-entrada][DIAG] Array final insert `public.entrada_items` — campo NOT NULL `producto` por fila:',
