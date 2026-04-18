@@ -1,4 +1,5 @@
 import { archivoImagenABase64 } from '@/lib/factura-campos-helpers';
+import { supabase } from '@/lib/supabase';
 
 export type ItemFacturaAnalizado = {
   descripcion: string;
@@ -21,10 +22,25 @@ export async function solicitarAnalisisFactura(
   | { ok: true; datos: DatosFacturaExtraidos }
   | { ok: false; error: string }
 > {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const accessToken = session?.access_token;
+  if (!accessToken) {
+    return {
+      ok: false,
+      error: 'No hay sesión. Inicia sesión para analizar la factura.',
+    };
+  }
+
   const { base64, mimeType } = await archivoImagenABase64(archivo);
   const res = await fetch('/api/analizar-factura', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({ imageBase64: base64, mimeType }),
   });
   let data: unknown;
