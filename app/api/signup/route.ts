@@ -2,19 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { uniqueProfileUsername } from "@/lib/profile-username";
 
-type Body = {
-  nombre?: string;
-  email?: string;
-  password?: string;
-};
-
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Body;
+    const body = await req.json();
 
-    const nombreRaw = typeof body.nombre === "string" ? body.nombre.trim() : "";
-    const email = body.email?.trim().toLowerCase() ?? "";
-    const password = body.password ?? "";
+    const nombreRaw =
+      typeof body.nombre === "string" ? body.nombre.trim() : "";
+
+    const orgNombre =
+      nombreRaw.length > 0 ? nombreRaw : "Mi negocio";
+
+    console.log("BODY NOMBRE:", body.nombre);
+    console.log("ORG NOMBRE FINAL:", orgNombre, typeof orgNombre);
+
+    const email =
+      typeof body.email === "string"
+        ? body.email.trim().toLowerCase()
+        : "";
+    const password =
+      typeof body.password === "string" ? body.password : "";
 
     if (!email || password.length < 6) {
       return NextResponse.json(
@@ -23,8 +29,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const orgNombre =
-      nombreRaw.length > 0 ? nombreRaw : "Nueva organización";
     const nombrePerfil =
       nombreRaw.length > 0
         ? nombreRaw
@@ -42,16 +46,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const admin = createClient(supabaseUrl, serviceRoleKey, {
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
     });
 
-    const { data: org, error: orgError } = await admin
+    const { data: org, error: orgError } = await supabase
       .from("organizations")
-      .insert({ nombre: orgNombre })
+      .insert({
+        nombre: orgNombre,
+      })
       .select()
       .single();
 
@@ -70,7 +76,7 @@ export async function POST(req: NextRequest) {
     const rolFinal = "admin" as const;
 
     const { data: userData, error: userError } =
-      await admin.auth.admin.createUser({
+      await supabase.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
@@ -82,7 +88,7 @@ export async function POST(req: NextRequest) {
       });
 
     if (userError || !userData.user) {
-      await admin.from("organizations").delete().eq("id", organizationId);
+      await supabase.from("organizations").delete().eq("id", organizationId);
       const raw = userError?.message ?? "No se pudo crear el usuario.";
       const hint =
         raw.toLowerCase().includes("database error saving new user")
@@ -94,7 +100,7 @@ export async function POST(req: NextRequest) {
     const userId = userData.user.id;
     const username = uniqueProfileUsername(email, userId);
 
-    const { error: profileError } = await admin.from("profiles").upsert(
+    const { error: profileError } = await supabase.from("profiles").upsert(
       {
         id: userId,
         organization_id: organizationId,
@@ -111,8 +117,8 @@ export async function POST(req: NextRequest) {
     );
 
     if (profileError) {
-      await admin.auth.admin.deleteUser(userId);
-      await admin.from("organizations").delete().eq("id", organizationId);
+      await supabase.auth.admin.deleteUser(userId);
+      await supabase.from("organizations").delete().eq("id", organizationId);
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
 
