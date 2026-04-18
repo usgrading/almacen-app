@@ -167,27 +167,27 @@ export function mapItemAnalizadoAFilaEntrada(item: ItemFacturaAnalizado): Omit<
     costoTotal = cantidadValida * unitarioValido;
   }
 
+  const tieneProducto = item.descripcion.trim().length > 0;
+
   let ambiguous_row = false;
 
-  const trioCompleto =
-    cantidad != null &&
-    costoUnitario != null &&
-    costoTotal != null &&
-    cantidad > 0;
-
-  if (trioCompleto) {
-    const esperado = cantidad * costoUnitario;
-    if (Math.abs(esperado - costoTotal) > TOLERANCIA_COHERENCIA_PESOS) {
+  if (tieneProducto) {
+    if (
+      cantidad != null &&
+      costoUnitario != null &&
+      costoTotal != null &&
+      cantidad > 0
+    ) {
+      const c = cantidad;
+      const u = costoUnitario;
+      const t = costoTotal;
+      const esperado = c * u;
+      if (Math.abs(esperado - t) > TOLERANCIA_COHERENCIA_PESOS) {
+        ambiguous_row = true;
+      }
+    } else {
       ambiguous_row = true;
     }
-  } else if (
-    item.descripcion.trim() &&
-    !trioCompleto &&
-    cantidad == null &&
-    costoUnitario == null &&
-    costoTotal == null
-  ) {
-    ambiguous_row = true;
   }
 
   return {
