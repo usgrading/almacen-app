@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import type { ConfianzaCantidad } from '@/lib/factura-cantidad-texto';
 
 export type ItemFacturaAnalizado = {
+  codigo: string;
   descripcion: string;
   /** Cantidad final (columna Cantidad del modelo o inferencia regex). */
   cantidad: number | null;
@@ -14,6 +15,8 @@ export type ItemFacturaAnalizado = {
   precio_unitario: string;
   /** Importe de línea cuando existe columna clara. */
   importe: string;
+  /** Servidor: fila sospechosa o sin coherencia cantidad×VU≈importe. */
+  ambiguous_item?: boolean;
   cantidad_sugerida: number | null;
   confianza_cantidad: ConfianzaCantidad | null;
 };
@@ -116,12 +119,14 @@ export async function solicitarAnalisisFactura(
     ? itemsRaw.map((row) => {
         if (!row || typeof row !== 'object') {
           return {
+            codigo: '',
             descripcion: '',
             cantidad: null,
             clave_unidad: null,
             valor_unitario: '',
             precio_unitario: '',
             importe: '',
+            ambiguous_item: false,
             cantidad_sugerida: null,
             confianza_cantidad: null,
           };
@@ -131,6 +136,7 @@ export async function solicitarAnalisisFactura(
           strRecord(r, 'valor_unitario') || strRecord(r, 'precio_unitario');
         const clave = strRecord(r, 'clave_unidad');
         return {
+          codigo: strRecord(r, 'codigo'),
           descripcion:
             typeof r.descripcion === 'string' ? r.descripcion.trim() : '',
           cantidad: parseCantidadItem(r),
@@ -141,6 +147,8 @@ export async function solicitarAnalisisFactura(
             typeof r.importe === 'string'
               ? r.importe.trim()
               : String(r.importe ?? '').trim(),
+          ambiguous_item:
+            typeof r.ambiguous_item === 'boolean' ? r.ambiguous_item : false,
           cantidad_sugerida: parseCantidadSugerida(r),
           confianza_cantidad: parseConfianza(r.confianza_cantidad),
         };

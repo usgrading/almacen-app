@@ -109,12 +109,20 @@ export function mapItemAnalizadoAFilaEntrada(item: ItemFacturaAnalizado): Omit<
   EntradaItemFila,
   'id' | 'ubicacion' | 'minimo' | 'maximo'
 > & { ambiguous_row: boolean } {
+  console.log('🟡 ITEM RAW', JSON.stringify(item, null, 2));
+
   const vuRaw = item.valor_unitario.trim() || item.precio_unitario.trim();
   const impRaw = item.importe.trim();
 
   const cantidadValida = cantidadValidaDesdeItem(item);
   const unitarioValido = montoValido(vuRaw);
   const importeValido = montoValido(impRaw);
+
+  console.log('🟠 PARSEADO', {
+    cantidad: cantidadValida,
+    valor_unitario: unitarioValido,
+    importe: importeValido,
+  });
 
   let cantidad: number | null = null;
   let costoUnitario: number | null = null;
@@ -189,6 +197,16 @@ export function mapItemAnalizadoAFilaEntrada(item: ItemFacturaAnalizado): Omit<
       ambiguous_row = true;
     }
   }
+
+  if (item.ambiguous_item === true) {
+    ambiguous_row = true;
+  }
+
+  console.log('🟢 FINAL', {
+    cantidadFinal: cantidad,
+    unitarioFinal: costoUnitario,
+    totalFinal: costoTotal,
+  });
 
   return {
     producto: item.descripcion.trim(),
