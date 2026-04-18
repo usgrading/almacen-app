@@ -89,6 +89,20 @@ export async function guardarEntradaConItems(params: {
     return { ok: false, mensaje: 'Agrega al menos un ítem con datos válidos.' };
   }
 
+  console.log(
+    '[guardar-entrada][DIAG] Items recibidos — el nombre para DB es `entrada_items.producto` (viene de `productoNormalizado`; la cabecera `entradas` no lleva `producto` en el esquema actual):',
+    JSON.stringify(
+      items.map((it) => ({
+        productoNormalizado: it.productoNormalizado,
+        cantidad: it.cantidad,
+        unidad: it.unidad,
+        ubicacion: it.ubicacion,
+      })),
+      null,
+      2
+    )
+  );
+
   const orgId = await obtenerOrganizacionParaEntrada(supabase);
   if (!orgId) {
     return {
@@ -140,23 +154,28 @@ export async function guardarEntradaConItems(params: {
     }
   }
 
+  const filaInsertEntradas = {
+    proveedor: proveedor.trim() || null,
+    numero_factura: numeroFactura.trim() || null,
+    fecha: fecha || null,
+    notas: (notas ?? '').trim() || null,
+    user_id: userId,
+    creado_por: userId,
+    foto_factura: fotoFactura,
+    origen,
+    organization_id: orgId,
+    costo_total:
+      costoTotalFactura !== null && costoTotalFactura > 0 ? costoTotalFactura : null,
+  };
+
+  console.log(
+    '[guardar-entrada][DIAG] Payload exacto insert `public.entradas` (propiedades enviadas; NO se envía `producto` aquí):',
+    JSON.stringify(filaInsertEntradas, null, 2)
+  );
+
   const { data: entradaRow, error: errorEntrada } = await supabase
     .from('entradas')
-    .insert([
-      {
-        proveedor: proveedor.trim() || null,
-        numero_factura: numeroFactura.trim() || null,
-        fecha: fecha || null,
-        notas: (notas ?? '').trim() || null,
-        user_id: userId,
-        creado_por: userId,
-        foto_factura: fotoFactura,
-        origen,
-        organization_id: orgId,
-        costo_total:
-          costoTotalFactura !== null && costoTotalFactura > 0 ? costoTotalFactura : null,
-      },
-    ])
+    .insert([filaInsertEntradas])
     .select('id')
     .single();
 
@@ -181,6 +200,11 @@ export async function guardarEntradaConItems(params: {
     foto_pieza: null,
     orden,
   }));
+
+  console.log(
+    '[guardar-entrada][DIAG] Array final insert `public.entrada_items` — campo NOT NULL `producto` por fila:',
+    JSON.stringify(filasDetalle, null, 2)
+  );
 
   const { error: errorItems } = await supabase.from('entrada_items').insert(filasDetalle);
 

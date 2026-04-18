@@ -385,6 +385,32 @@ export default function EntradasPage() {
           ? redondear2(costoDocNum)
           : null;
 
+      console.log(
+        '[entradas-mx][DIAG guardado] Comparativa formulario vs parse (ver consola servidor para payload SQL)',
+        JSON.stringify(
+          {
+            notaUI:
+              'El input visible "Nombre de pieza" enlaza `EntradaItemFila.producto`. Si ves texto pero `producto_raw` está vacío, React state no coincide con lo visible.',
+            notaParse:
+              '`parsearFilasEntradaParaGuardar` solo incluye filas con producto.trim() no vacío; `productoNormalizado` = trim().toLowerCase().',
+            notaDB:
+              '`entradas` insert sin columna `producto`. El nombre de pieza va en `entrada_items.producto`.',
+            estado_formulario_filasItems: filasItems.map((f) => ({
+              id: f.id,
+              producto_raw: f.producto,
+              longitud_trim: f.producto.trim().length,
+              omitida_si_vacia: f.producto.trim().length === 0,
+              productoNormalizado_equiv: f.producto.trim().toLowerCase(),
+            })),
+            items_ItemEntradaGuardado_tras_parse: parsed.items,
+          },
+          null,
+          2
+        )
+      );
+
+      console.log(parsed.items);
+
       const result = await guardarEntradaConItems({
         supabase,
         userId,
