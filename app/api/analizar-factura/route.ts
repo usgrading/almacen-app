@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { inferirCantidadDesdeTextoTicket } from '@/lib/factura-cantidad-texto';
+import type { ConfianzaCantidad } from '@/lib/factura-cantidad-texto';
 
 export const maxDuration = 60;
 
@@ -10,9 +12,11 @@ type Body = {
 
 export type ItemFacturaJson = {
   descripcion: string;
-  cantidad: number;
+  cantidad: number | null;
   precio_unitario: string;
   importe: string;
+  cantidad_sugerida: number | null;
+  confianza_cantidad: ConfianzaCantidad;
 };
 
 export type FacturaJson = {
@@ -32,7 +36,7 @@ const PROMPT_USUARIO = `Analiza esta imagen de factura y extrae la información.
   "items": [
     {
       "descripcion": "",
-      "cantidad": 1,
+      "cantidad": null,
       "precio_unitario": "",
       "importe": ""
     }
@@ -40,15 +44,14 @@ const PROMPT_USUARIO = `Analiza esta imagen de factura y extrae la información.
 }
 
 Reglas:
-- Si un dato no aparece claramente, déjalo vacío ("" para textos; para cantidad usa 1 solo si no hay cantidad clara por línea).
-- Si no encuentras cantidad para una línea, usa 1.
+- En cada ítem, el campo "descripcion" debe incluir tal como se ve en la línea del ticket todo texto útil para identificar cantidad (ej. "x2", "qty 3", "2 piezas") además del nombre del producto.
+- Para "cantidad": número entero positivo solo si la cantidad por línea es clara en la imagen; si no es clara o no aparece, usa null (no inventes cantidad por defecto).
 - Si no encuentras precio_unitario o importe para una línea, déjalos como "".
 - Extrae todos los ítems o conceptos del detalle de compra (piezas, productos, servicios, refacciones).
 - Ignora firmas, sellos, notas al pie, garantías, texto decorativo o letras pequeñas que no sean líneas del detalle de productos.
 - Si solo hay un concepto, devuelve un array "items" con un solo objeto.
 - Si no hay líneas de detalle claras, devuelve "items": [].
-- Los valores de precio_unitario e importe como string (pueden incluir símbolo de moneda o no).
-- cantidad debe ser un número entero positivo.`;
+- Los valores de precio_unitario e importe como string (pueden incluir símbolo de moneda o no).`;
 
 function str(v: unknown): string {
   if (typeof v === 'string') return v;
@@ -56,7 +59,8 @@ function str(v: unknown): string {
   return '';
 }
 
-function parseCantidad(v: unknown): number {
+function parseCantidad(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
   if (typeof v === 'number' && Number.isFinite(v) && v > 0) {
     return Math.max(1, Math.floor(v));
   }
@@ -64,7 +68,7 @@ function parseCantidad(v: unknown): number {
     const n = parseFloat(v.replace(',', '.'));
     if (Number.isFinite(n) && n > 0) return Math.max(1, Math.floor(n));
   }
-  return 1;
+  return null;
 }
 
 function parseItems(raw: unknown): ItemFacturaJson[] {
@@ -73,11 +77,15 @@ function parseItems(raw: unknown): ItemFacturaJson[] {
   for (const row of raw) {
     if (!row || typeof row !== 'object') continue;
     const o = row as Record<string, unknown>;
+    const descripcion = str(o.descripcion).trim();
+    const inf = inferirCantidadDesdeTextoTicket(descripcion);
     out.push({
-      descripcion: str(o.descripcion).trim(),
+      descripcion,
       cantidad: parseCantidad(o.cantidad),
       precio_unitario: str(o.precio_unitario).trim(),
       importe: str(o.importe).trim(),
+      cantidad_sugerida: inf.cantidad_sugerida,
+      confianza_cantidad: inf.confianza_cantidad,
     });
   }
   return out;

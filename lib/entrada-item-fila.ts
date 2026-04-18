@@ -63,6 +63,18 @@ export function construirStockNuevoPorProducto(
   return stock;
 }
 
+function cantidadEnFilaDesdeAnalisis(item: ItemFacturaAnalizado): string {
+  const { cantidad_sugerida, confianza_cantidad } = item;
+  if (
+    cantidad_sugerida != null &&
+    cantidad_sugerida > 0 &&
+    (confianza_cantidad === 'alta' || confianza_cantidad === 'media')
+  ) {
+    return String(Math.round(cantidad_sugerida));
+  }
+  return '';
+}
+
 export function filasEntradaDesdeAnalisisFactura(
   items: ItemFacturaAnalizado[]
 ): EntradaItemFila[] {
@@ -72,11 +84,10 @@ export function filasEntradaDesdeAnalisisFactura(
   return items.map((item) => {
     const cu = totalTextoACostoTotal(item.precio_unitario);
     const ct = totalTextoACostoTotal(item.importe);
-    const cant = Number.isFinite(item.cantidad) && item.cantidad > 0 ? item.cantidad : 1;
     return {
       id: nuevoIdFila(),
       producto: item.descripcion.trim(),
-      cantidad: String(Math.round(cant)),
+      cantidad: cantidadEnFilaDesdeAnalisis(item),
       unidad: 'Pieza',
       costoUnitario: cu,
       costoTotal: ct,
