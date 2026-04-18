@@ -274,8 +274,8 @@ export async function POST(req: NextRequest) {
         : 'image/jpeg';
     const dataUrl = `data:${mime};base64,${imageBase64}`;
 
-    /** Tablas CFDI: `gpt-4o` prioriza lectura visual; para ahorrar costo: `OPENAI_MODEL=gpt-4o-mini` o cambiar el default abajo a `gpt-4o-mini`. */
-    const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o';
+    /** Default económico; para tablas difíciles: `OPENAI_MODEL=gpt-4o`. */
+    const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini';
 
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
