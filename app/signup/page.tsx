@@ -57,8 +57,8 @@ export default function SignupPage() {
   const handleRegister = async () => {
     if (loading) return;
 
-    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-      alert('Llena todos los campos');
+    if (!email.trim() || !password || !confirmPassword) {
+      alert('Indica correo y contraseña');
       return;
     }
 
