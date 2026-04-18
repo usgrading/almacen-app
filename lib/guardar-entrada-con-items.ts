@@ -189,7 +189,7 @@ export async function guardarEntradaConItems(params: {
 
   const entradaId = entradaRow.id as string;
 
-  const filasDetalle = items.map((it, orden) => ({
+  const filasDetalle = items.map((it, index) => ({
     entrada_id: entradaId,
     producto: it.productoNormalizado,
     cantidad: it.cantidad,
@@ -198,7 +198,7 @@ export async function guardarEntradaConItems(params: {
     costo_total: it.costoTotalFinal > 0 ? it.costoTotalFinal : null,
     ubicacion: it.ubicacion,
     foto_pieza: null,
-    orden,
+    order: index,
   }));
 
   console.log(
