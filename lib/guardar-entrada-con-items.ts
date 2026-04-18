@@ -152,6 +152,7 @@ export async function guardarEntradaConItems(params: {
         creado_por: userId,
         foto_factura: fotoFactura,
         origen,
+        organization_id: orgId,
         costo_total:
           costoTotalFactura !== null && costoTotalFactura > 0 ? costoTotalFactura : null,
       },
