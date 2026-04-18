@@ -1,5 +1,5 @@
 import type { ItemFacturaAnalizado } from '@/lib/analizar-factura-client';
-import { totalTextoACostoTotal } from '@/lib/factura-campos-helpers';
+import { textoMontoANumero, totalTextoACostoTotal } from '@/lib/factura-campos-helpers';
 
 export type EntradaItemFila = {
   id: string;
@@ -40,6 +40,58 @@ function parseNumFlexible(valor: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Catálogo común en facturas MX (clave unidad SAT / similar). */
+function etiquetaDesdeClaveUnidad(clave: string | null | undefined): string {
+  const c = (clave ?? '').trim().toUpperCase();
+  if (c === 'MTR') return 'Metros';
+  if (c === 'H87') return 'Pieza';
+  return 'Pieza';
+}
+
+function cantidadTextoDesdeAnalisis(item: ItemFacturaAnalizado): string {
+  if (item.cantidad != null && item.cantidad > 0) {
+    const n = item.cantidad;
+    if (Number.isInteger(n) || Math.abs(n - Math.round(n)) < 1e-9) {
+      return String(Math.round(n));
+    }
+    return String(n);
+  }
+  if (
+    item.cantidad_sugerida != null &&
+    item.cantidad_sugerida > 0 &&
+    item.confianza_cantidad !== 'baja'
+  ) {
+    return String(Math.round(item.cantidad_sugerida));
+  }
+  return '';
+}
+
+function costoUnitarioDesdeAnalisis(item: ItemFacturaAnalizado): string {
+  const raw = item.valor_unitario.trim() || item.precio_unitario.trim();
+  return totalTextoACostoTotal(raw);
+}
+
+/**
+ * Preferir cantidad × valor unitario; si falta alguno, usar importe de línea parseado.
+ */
+function costoTotalLineaDesdeAnalisis(
+  item: ItemFacturaAnalizado,
+  cantidadStr: string,
+  costoUnitarioStr: string
+): string {
+  const q = item.cantidad ?? parseNumFlexible(cantidadStr);
+  const vu = textoMontoANumero(costoUnitarioStr);
+  if (Number.isFinite(q) && q > 0 && Number.isFinite(vu)) {
+    return (Math.round(q * vu * 100) / 100).toFixed(2);
+  }
+  const imp = textoMontoANumero(item.importe);
+  if (Number.isFinite(imp) && imp > 0) {
+    return imp.toFixed(2);
+  }
+  const impRaw = totalTextoACostoTotal(item.importe);
+  return impRaw;
+}
+
 /**
  * Convierte ítems del análisis de factura en filas editables de entrada.
  */
@@ -63,18 +115,6 @@ export function construirStockNuevoPorProducto(
   return stock;
 }
 
-function cantidadEnFilaDesdeAnalisis(item: ItemFacturaAnalizado): string {
-  const { cantidad_sugerida, confianza_cantidad } = item;
-  if (
-    cantidad_sugerida != null &&
-    cantidad_sugerida > 0 &&
-    (confianza_cantidad === 'alta' || confianza_cantidad === 'media')
-  ) {
-    return String(Math.round(cantidad_sugerida));
-  }
-  return '';
-}
-
 export function filasEntradaDesdeAnalisisFactura(
   items: ItemFacturaAnalizado[]
 ): EntradaItemFila[] {
@@ -82,13 +122,14 @@ export function filasEntradaDesdeAnalisisFactura(
     return [crearFilaVaciaEntradaItem()];
   }
   return items.map((item) => {
-    const cu = totalTextoACostoTotal(item.precio_unitario);
-    const ct = totalTextoACostoTotal(item.importe);
+    const cantidadStr = cantidadTextoDesdeAnalisis(item);
+    const cu = costoUnitarioDesdeAnalisis(item);
+    const ct = costoTotalLineaDesdeAnalisis(item, cantidadStr, cu);
     return {
       id: nuevoIdFila(),
       producto: item.descripcion.trim(),
-      cantidad: cantidadEnFilaDesdeAnalisis(item),
-      unidad: 'Pieza',
+      cantidad: cantidadStr,
+      unidad: etiquetaDesdeClaveUnidad(item.clave_unidad),
       costoUnitario: cu,
       costoTotal: ct,
       ubicacion: '',

@@ -57,3 +57,11 @@ export function totalTextoACostoTotal(raw: string): string {
   if (!Number.isFinite(n)) return '';
   return n.toFixed(2);
 }
+
+/** Interpreta el mismo formato monetario que totalTextoACostoTotal y devuelve número o NaN. */
+export function textoMontoANumero(raw: string): number {
+  const s = totalTextoACostoTotal(raw);
+  if (!s) return Number.NaN;
+  const n = Number.parseFloat(s);
+  return Number.isFinite(n) ? n : Number.NaN;
+}

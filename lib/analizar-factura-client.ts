@@ -4,13 +4,18 @@ import type { ConfianzaCantidad } from '@/lib/factura-cantidad-texto';
 
 export type ItemFacturaAnalizado = {
   descripcion: string;
-  /** Cantidad que devolvió el modelo (puede ser null si no fue clara). */
+  /** Cantidad final (columna Cantidad del modelo o inferencia regex). */
   cantidad: number | null;
-  /** Inferida en servidor desde patrones en la descripción / texto de línea. */
+  /** Clave de unidad SAT u otra (ej. MTR, H87). */
+  clave_unidad: string | null;
+  /** Precio por unidad: debe corresponder a columna Valor Unitario en MX. */
+  valor_unitario: string;
+  /** Alias legacy / misma fuente que valor_unitario si el API solo envía precio_unitario. */
+  precio_unitario: string;
+  /** Importe de línea cuando existe columna clara. */
+  importe: string;
   cantidad_sugerida: number | null;
   confianza_cantidad: ConfianzaCantidad | null;
-  precio_unitario: string;
-  importe: string;
 };
 
 export type DatosFacturaExtraidos = {
@@ -29,11 +34,11 @@ function parseConfianza(v: unknown): ConfianzaCantidad | null {
 function parseCantidadItem(r: Record<string, unknown>): number | null {
   if (r.cantidad === null || r.cantidad === undefined) return null;
   if (typeof r.cantidad === 'number' && Number.isFinite(r.cantidad) && r.cantidad > 0) {
-    return Math.max(1, Math.floor(r.cantidad));
+    return r.cantidad;
   }
   if (typeof r.cantidad === 'string' && r.cantidad.trim()) {
-    const n = parseFloat(r.cantidad.replace(',', '.'));
-    if (Number.isFinite(n) && n > 0) return Math.max(1, Math.floor(n));
+    const n = parseFloat(r.cantidad.trim().replace(/\s/g, '').replace(',', '.'));
+    if (Number.isFinite(n) && n > 0) return n;
   }
   return null;
 }
@@ -49,6 +54,13 @@ function parseCantidadSugerida(r: Record<string, unknown>): number | null {
     if (Number.isFinite(n) && n > 0) return Math.max(1, Math.floor(n));
   }
   return null;
+}
+
+function strRecord(r: Record<string, unknown>, key: string): string {
+  const v = r[key];
+  if (typeof v === 'string') return v.trim();
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  return '';
 }
 
 export async function solicitarAnalisisFactura(
@@ -106,27 +118,31 @@ export async function solicitarAnalisisFactura(
           return {
             descripcion: '',
             cantidad: null,
-            cantidad_sugerida: null,
-            confianza_cantidad: null,
+            clave_unidad: null,
+            valor_unitario: '',
             precio_unitario: '',
             importe: '',
+            cantidad_sugerida: null,
+            confianza_cantidad: null,
           };
         }
         const r = row as Record<string, unknown>;
+        const vu =
+          strRecord(r, 'valor_unitario') || strRecord(r, 'precio_unitario');
+        const clave = strRecord(r, 'clave_unidad');
         return {
           descripcion:
             typeof r.descripcion === 'string' ? r.descripcion.trim() : '',
           cantidad: parseCantidadItem(r),
-          cantidad_sugerida: parseCantidadSugerida(r),
-          confianza_cantidad: parseConfianza(r.confianza_cantidad),
-          precio_unitario:
-            typeof r.precio_unitario === 'string'
-              ? r.precio_unitario.trim()
-              : String(r.precio_unitario ?? '').trim(),
+          clave_unidad: clave || null,
+          valor_unitario: vu,
+          precio_unitario: vu,
           importe:
             typeof r.importe === 'string'
               ? r.importe.trim()
               : String(r.importe ?? '').trim(),
+          cantidad_sugerida: parseCantidadSugerida(r),
+          confianza_cantidad: parseConfianza(r.confianza_cantidad),
         };
       })
     : [];
