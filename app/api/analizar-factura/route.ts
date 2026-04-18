@@ -35,36 +35,35 @@ export type FacturaJson = {
   items: ItemFacturaJson[];
 };
 
-const PROMPT_SISTEMA = `Eres un extractor especializado en facturas y tickets de compra (México CFDI y similares).
-Debes responder con UN SOLO objeto JSON válido (UTF-8), sin markdown ni texto fuera del JSON.
-No inventes renglones: cada ítem debe corresponder a una fila real de producto/servicio en la tabla de conceptos.`;
+const PROMPT_SISTEMA = `Eres un extractor de datos para facturas mexicanas (CFDI, tickets). Responde ÚNICAMENTE con un objeto JSON válido UTF-8. Sin markdown, sin bloques de código, sin texto antes ni después.
+La precisión de la tabla de conceptos es crítica: cada campo numérico debe salir de la celda correcta de SU fila, no de otra fila ni de totales globales.`;
 
-const PROMPT_USUARIO = `INSTRUCCIONES DE LECTURA (obligatorio)
+const PROMPT_USUARIO = `FACTURA MEXICANA — TABLA DE CONCEPTOS (obligatorio)
 
-1) TABLA POR RENGLÓN (horizontal)
-   - Localiza la FILA DE ENCABEZADOS de la tabla de conceptos (puede decir Código, Descripción, ClaveUnidad/Cve Unidad, Cantidad, Valor unitario, Importe, etc.).
-   - Para cada PRODUCTO o SERVICIO, lee UNA SOLA FILA DE DATOS de IZQUIERDA A DERECHA en esa misma línea.
-   - NO agrupes números mezclando celdas de filas distintas.
-   - NO leas columnas “en vertical” como si fueran un solo ítem.
+PASO A — Encabezados
+1) Localiza la fila de ENCABEZADOS de la tabla de conceptos (títulos visibles: puede decir Código, No., Descripción, Clave/Cve Unidad, Cantidad, Valor unitario, Importe, etc.).
+2) Determina el ORDEN de columnas de IZQUIERDA A DERECHA según esa fila. Memoriza qué columna es Cantidad, cuál Valor unitario y cuál Importe (pueden tener distintos nombres pero una sola columna por concepto).
 
-2) MAPEO DE COLUMNAS (ajusta al texto real del encabezado)
-   - codigo → columna Código / No parte / SKU si existe; si no, "".
-   - descripcion → SOLO el texto de concepto/descripción del artículo (una celda), sin pegar cantidades ni precios en la misma cadena.
-   - clave_unidad → ClaveUnidad / Cve Unidad (ej. H87, MTR); si no hay, "".
-   - cantidad → número de la columna Cantidad de ESA fila (entero o decimal según la factura).
-   - valor_unitario → SOLO el valor de la columna Valor unitario / Valor Unitario de ESA fila (precio por unidad SIN IVA).
-   - importe → SOLO el importe de línea / subtotal de ESA fila (columna Importe/Importe línea), NO el total del documento ni montos de impuesto.
+PASO B — Por cada renglón de producto/servicio (solo filas de detalle)
+3) Recorre SOLO UNA FILA horizontal a la vez, de izquierda a derecha.
+4) Para esa fila, copia cada valor SOLO desde la celda que está bajo el encabezado correspondiente:
+   - codigo → celda bajo "Código" / No. parte / similar; si no existe columna, "".
+   - descripcion → celda bajo Descripción / Concepto (solo texto del artículo; NO pegar cantidades ni precios en este string).
+   - clave_unidad → celda bajo ClaveUnidad / Cve Unidad (ej. H87); si no hay, "".
+   - cantidad → número EXACTO de la columna Cantidad de ESTA fila (no uses cantidad de otra fila ni totales).
+   - valor_unitario → SOLO el número de la columna Valor unitario / Valor Unitario de ESTA fila (precio por unidad sin IVA).
+   - importe → SOLO el número de la columna Importe / Importe línea de ESTA fila (subtotal de línea, sin confundir con columnas de impuesto).
 
-3) LÍNEAS QUE NO SON ÍTEMS (no las incluyas en "items")
-   - Filas de Traslado de impuestos, IVA, IEPS, ISR, retenciones.
-   - Filas que solo muestran tasa 16%, 8%, texto “002”, “IVA”, subtotales de impuesto debajo de un renglón.
-   - Leyendas, firmas, totales globales aislados sin fila de producto.
+PROHIBIDO
+- NO mezclar números leyendo “en vertical” (columna completa como si fuera un ítem).
+- NO usar el total del documento, subtotal global, ni montos del bloque de impuestos como valor_unitario o importe de un ítem.
+- NO incluir como ítem las filas que sean solo impuestos: IVA, Traslado, Retención, IEPS, ISR, filas con solo tasa (16%, 8%), solo "002"/"003", solo texto fiscal sin producto.
+- Si una celda es ilegible o ambigua: pon cantidad null y valor_unitario/importe como "" para ese ítem; NO inventes números por inferencia.
 
-4) COHERENCIA
-   - Para cada ítem, los tres valores cantidad, valor_unitario e importe deben venir de LA MISMA FILA.
-   - En una factura correcta: cantidad × valor_unitario ≈ importe (misma moneda, sin mezclar impuestos).
+COHERENCIA (validación mental antes de cerrar cada ítem)
+- Para cada ítem de producto: cantidad × valor_unitario debe ser aproximadamente igual al importe de la MISMA fila (misma moneda). Si no cuadra, revisa que no hayas tomado celdas de otra fila o de impuestos.
 
-ESTRUCTURA JSON EXACTA:
+ESTRUCTURA JSON EXACTA (única salida):
 {
   "proveedor": "",
   "numero_factura": "",
@@ -82,8 +81,7 @@ ESTRUCTURA JSON EXACTA:
   ]
 }
 
-Formato: cantidad numérica o null; demás campos string. Montos como en la imagen (pueden llevar $, comas o puntos).
-Si no hay tabla de conceptos clara, devuelve "items": [].`;
+Si no hay tabla de conceptos legible, "items": []. Montos como string como en la imagen.`;
 
 function str(v: unknown): string {
   if (typeof v === 'string') return v;
@@ -140,9 +138,7 @@ function parseItems(raw: unknown): ItemFacturaJson[] {
     if (tieneDescripcionProducto) {
       if (cantidadFinal == null || !tieneTriplesMontos) {
         ambiguous_item = true;
-      } else if (
-        !tripletaLineaCoherente(cantidadFinal, vu, imp)
-      ) {
+      } else if (!tripletaLineaCoherente(cantidadFinal, vu, imp)) {
         ambiguous_item = true;
       }
     }
@@ -176,13 +172,17 @@ function parseFacturaRecord(raw: Record<string, unknown>): FacturaJson {
   };
 }
 
-function extraerJsonFactura(text: string): FacturaJson {
+/** Solo parsea JSON del modelo; sin parseItems. Para logs y para encadenar parseFacturaRecord. */
+function extraerObjetoJsonModelo(text: string): Record<string, unknown> {
   const trimmed = text.trim();
   const fence = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```$/im);
   const candidato = fence ? fence[1].trim() : trimmed;
   try {
     const parsed = JSON.parse(candidato) as Record<string, unknown>;
-    return parseFacturaRecord(parsed);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed;
+    }
+    throw new Error('JSON raíz no es objeto');
   } catch {
     const start = trimmed.indexOf('{');
     const end = trimmed.lastIndexOf('}');
@@ -191,7 +191,7 @@ function extraerJsonFactura(text: string): FacturaJson {
         string,
         unknown
       >;
-      return parseFacturaRecord(parsed);
+      return parsed;
     }
     throw new Error('JSON inválido');
   }
@@ -265,6 +265,7 @@ export async function POST(req: NextRequest) {
         : 'image/jpeg';
     const dataUrl = `data:${mime};base64,${imageBase64}`;
 
+    /** Para tablas CFDI densas, suele mejorar OPENAI_MODEL=gpt-4o */
     const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini';
 
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -323,15 +324,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let datos: FacturaJson;
+    console.log(
+      '[analizar-factura] Texto crudo modelo (longitud=%s):',
+      rawContent.length,
+      rawContent.length > 12000
+        ? `${rawContent.slice(0, 12000)}\n… [truncado]`
+        : rawContent
+    );
+
+    let objetoModelo: Record<string, unknown>;
     try {
-      datos = extraerJsonFactura(rawContent);
+      objetoModelo = extraerObjetoJsonModelo(rawContent);
     } catch {
       return NextResponse.json(
         { error: 'No se pudo interpretar la respuesta de OpenAI como JSON.' },
         { status: 502 }
       );
     }
+
+    console.log(
+      '[analizar-factura] JSON objeto del modelo ANTES de parseFacturaRecord / parseItems:',
+      JSON.stringify(objetoModelo, null, 2)
+    );
+
+    const datos = parseFacturaRecord(objetoModelo);
 
     return NextResponse.json(datos);
   } catch (e) {
