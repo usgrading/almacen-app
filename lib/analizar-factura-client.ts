@@ -61,6 +61,7 @@ function parseCantidadSugerida(r: Record<string, unknown>): number | null {
 
 function strRecord(r: Record<string, unknown>, key: string): string {
   const v = r[key];
+  if (v === null || v === undefined) return '';
   if (typeof v === 'string') return v.trim();
   if (typeof v === 'number' && Number.isFinite(v)) return String(v);
   return '';
@@ -134,21 +135,26 @@ export async function solicitarAnalisisFactura(
         const r = row as Record<string, unknown>;
         const vu =
           strRecord(r, 'valor_unitario') || strRecord(r, 'precio_unitario');
+        const imp = strRecord(r, 'importe');
+        const cant = parseCantidadItem(r);
         const clave = strRecord(r, 'clave_unidad');
+        const modeloAmb =
+          typeof r.ambiguous_item === 'boolean' ? r.ambiguous_item : false;
+        const ambiguous_item =
+          modeloAmb ||
+          cant === null ||
+          !vu.trim() ||
+          !imp.trim();
         return {
           codigo: strRecord(r, 'codigo'),
           descripcion:
             typeof r.descripcion === 'string' ? r.descripcion.trim() : '',
-          cantidad: parseCantidadItem(r),
+          cantidad: cant,
           clave_unidad: clave || null,
           valor_unitario: vu,
           precio_unitario: vu,
-          importe:
-            typeof r.importe === 'string'
-              ? r.importe.trim()
-              : String(r.importe ?? '').trim(),
-          ambiguous_item:
-            typeof r.ambiguous_item === 'boolean' ? r.ambiguous_item : false,
+          importe: imp,
+          ambiguous_item,
           cantidad_sugerida: parseCantidadSugerida(r),
           confianza_cantidad: parseConfianza(r.confianza_cantidad),
         };

@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { ConfianzaCantidad } from '@/lib/factura-cantidad-texto';
-import {
-  esLineaFiscalOImpuesto,
-  montosDesdeStrings,
-  tripletaLineaCoherente,
-} from '@/lib/factura-tabla-mx';
+import { esLineaFiscalOImpuesto } from '@/lib/factura-tabla-mx';
 
 export const maxDuration = 60;
 
@@ -19,8 +15,8 @@ export type ItemFacturaJson = {
   descripcion: string;
   cantidad: number | null;
   clave_unidad: string;
-  valor_unitario: string;
-  importe: string;
+  valor_unitario: string | null;
+  importe: string | null;
   /** Marcado en servidor si la fila no cuadra o faltan datos obligatorios de tabla. */
   ambiguous_item: boolean;
   cantidad_sugerida: number | null;
@@ -36,34 +32,42 @@ export type FacturaJson = {
 };
 
 const PROMPT_SISTEMA = `Eres un extractor de datos para facturas mexicanas (CFDI, tickets). Responde ÚNICAMENTE con un objeto JSON válido UTF-8. Sin markdown, sin bloques de código, sin texto antes ni después.
-La precisión de la tabla de conceptos es crítica: cada campo numérico debe salir de la celda correcta de SU fila, no de otra fila ni de totales globales.`;
+Prioridad absoluta: evitar "column shifting" — cantidad, valor_unitario e importe SOLO de celdas alineadas bajo sus encabezados en LA MISMA fila horizontal; nunca números de filas inferiores (IVA, traslados, totales).`;
 
-const PROMPT_USUARIO = `FACTURA MEXICANA — TABLA DE CONCEPTOS (obligatorio)
+const PROMPT_USUARIO = `FACTURA MEXICANA — TABLA DE CONCEPTOS
 
-PASO A — Encabezados
-1) Localiza la fila de ENCABEZADOS de la tabla de conceptos (títulos visibles: puede decir Código, No., Descripción, Clave/Cve Unidad, Cantidad, Valor unitario, Importe, etc.).
-2) Determina el ORDEN de columnas de IZQUIERDA A DERECHA según esa fila. Memoriza qué columna es Cantidad, cuál Valor unitario y cuál Importe (pueden tener distintos nombres pero una sola columna por concepto).
+REGLAS CRÍTICAS (obligatorias)
 
-PASO B — Por cada renglón de producto/servicio (solo filas de detalle)
-3) Recorre SOLO UNA FILA horizontal a la vez, de izquierda a derecha.
-4) Para esa fila, copia cada valor SOLO desde la celda que está bajo el encabezado correspondiente:
-   - codigo → celda bajo "Código" / No. parte / similar; si no existe columna, "".
-   - descripcion → celda bajo Descripción / Concepto (solo texto del artículo; NO pegar cantidades ni precios en este string).
-   - clave_unidad → celda bajo ClaveUnidad / Cve Unidad (ej. H87); si no hay, "".
-   - cantidad → número EXACTO de la columna Cantidad de ESTA fila (no uses cantidad de otra fila ni totales).
-   - valor_unitario → SOLO el número de la columna Valor unitario / Valor Unitario de ESTA fila (precio por unidad sin IVA).
-   - importe → SOLO el número de la columna Importe / Importe línea de ESTA fila (subtotal de línea, sin confundir con columnas de impuesto).
+1) cantidad, valor_unitario e importe SOLO pueden tomarse de la MISMA FILA horizontal (una línea de detalle). Prohibido mezclar celdas de filas distintas.
 
-PROHIBIDO
-- NO mezclar números leyendo “en vertical” (columna completa como si fuera un ítem).
-- NO usar el total del documento, subtotal global, ni montos del bloque de impuestos como valor_unitario o importe de un ítem.
-- NO incluir como ítem las filas que sean solo impuestos: IVA, Traslado, Retención, IEPS, ISR, filas con solo tasa (16%, 8%), solo "002"/"003", solo texto fiscal sin producto.
-- Si una celda es ilegible o ambigua: pon cantidad null y valor_unitario/importe como "" para ese ítem; NO inventes números por inferencia.
+2) PROHIBIDO inferir o "corregir" valores: no multipliques, no dividas, no ajustes cantidades ni montos para que cuadren. Solo transcribe lo visible en cada celda.
 
-COHERENCIA (validación mental antes de cerrar cada ítem)
-- Para cada ítem de producto: cantidad × valor_unitario debe ser aproximadamente igual al importe de la MISMA fila (misma moneda). Si no cuadra, revisa que no hayas tomado celdas de otra fila o de impuestos.
+3) PROHIBIDO usar números que pertenezcan a filas inferiores o posteriores: bloques de IVA, traslado de impuestos, retenciones, leyendas de totales o subtotales globales.
 
-ESTRUCTURA JSON EXACTA (única salida):
+4) Si en una fila hay varios números:
+   - valor_unitario = únicamente el número en la celda DIRECTAMENTE bajo el encabezado de columna equivalente a "Valor unitario" / "Valor Unitario" / "P. Unitario" (según la factura).
+   - importe = únicamente el número en la celda DIRECTAMENTE bajo el encabezado de columna equivalente a "Importe" / "Importe línea".
+   No uses para VU el número que está bajo Importe ni viceversa.
+
+5) Si la alineación visual entre columnas no es clara (no sabes qué número va bajo qué encabezado):
+   cantidad: null
+   valor_unitario: null
+   importe: null
+   ambiguous_item: true
+
+6) IMPORTANTE — Solo lectura OCR de la fila:
+   NO reconstruyas relaciones matemáticas. NO compruebes ni corrijas usando cantidad × valor_unitario = importe. Copia texto/números tal como aparecen en la celda.
+
+7) Ignora por completo (no los incluyas en "items"):
+   - líneas de IVA, traslado, retención
+   - líneas donde el contenido destacado sea un porcentaje (%)
+   - líneas de totales / subtotales del documento (salvo que sean filas de detalle de producto con sus columnas propias)
+
+ANTI "COLUMN SHIFTING"
+- Primero identifica la fila de ENCABEZADOS y el orden izquierda→derecha.
+- Por cada ítem de producto, recorre solo esa fila; asigna cada número a la columna cuyo título está exactamente arriba.
+
+ESTRUCTURA JSON EXACTA (única salida). Cada ítem debe incluir ambiguous_item (boolean):
 {
   "proveedor": "",
   "numero_factura": "",
@@ -75,13 +79,15 @@ ESTRUCTURA JSON EXACTA (única salida):
       "descripcion": "",
       "clave_unidad": "",
       "cantidad": null,
-      "valor_unitario": "",
-      "importe": ""
+      "valor_unitario": null,
+      "importe": null,
+      "ambiguous_item": false
     }
   ]
 }
 
-Si no hay tabla de conceptos legible, "items": []. Montos como string como en la imagen.`;
+Si no hay tabla de conceptos legible: "items": [].
+Para montos transcritos con certeza, usa string con el formato visible (comas, puntos, símbolo $ si aplica). Si no hay certeza de columna, usa null como arriba.`;
 
 function str(v: unknown): string {
   if (typeof v === 'string') return v;
@@ -108,6 +114,13 @@ function cantidadNormalizada(v: number): number {
   return r;
 }
 
+/** Monto como string si hay dígitos legibles; null si viene null/vacío (ambigüedad). */
+function strMontoNullable(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const s = str(v).trim();
+  return s === '' ? null : s;
+}
+
 function parseItems(raw: unknown): ItemFacturaJson[] {
   if (!Array.isArray(raw)) return [];
   const out: ItemFacturaJson[] = [];
@@ -122,23 +135,19 @@ function parseItems(raw: unknown): ItemFacturaJson[] {
     const codigo = str(o.codigo).trim();
     const cantidadModelo = parseCantidad(o.cantidad);
     const valorRaw =
-      str(o.valor_unitario).trim() ||
-      str((o as Record<string, unknown>).precio_unitario).trim();
-    const impRaw = str(o.importe).trim();
+      strMontoNullable(o.valor_unitario) ??
+      strMontoNullable((o as Record<string, unknown>).precio_unitario);
+    const impRaw = strMontoNullable(o.importe);
 
     const cantidadFinal =
       cantidadModelo != null ? cantidadNormalizada(cantidadModelo) : null;
 
-    const { vu, imp } = montosDesdeStrings(valorRaw, impRaw);
-    let ambiguous_item = false;
+    const modeloAmbiguous = o.ambiguous_item === true;
+    let ambiguous_item = modeloAmbiguous;
 
     const tieneDescripcionProducto = descripcion.length > 0;
-    const tieneTriplesMontos = vu != null && imp != null;
-
     if (tieneDescripcionProducto) {
-      if (cantidadFinal == null || !tieneTriplesMontos) {
-        ambiguous_item = true;
-      } else if (!tripletaLineaCoherente(cantidadFinal, vu, imp)) {
+      if (cantidadFinal == null || valorRaw == null || impRaw == null) {
         ambiguous_item = true;
       }
     }
@@ -265,8 +274,8 @@ export async function POST(req: NextRequest) {
         : 'image/jpeg';
     const dataUrl = `data:${mime};base64,${imageBase64}`;
 
-    /** Para tablas CFDI densas, suele mejorar OPENAI_MODEL=gpt-4o */
-    const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini';
+    /** Tablas CFDI: `gpt-4o` prioriza lectura visual; para ahorrar costo: `OPENAI_MODEL=gpt-4o-mini` o cambiar el default abajo a `gpt-4o-mini`. */
+    const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o';
 
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
