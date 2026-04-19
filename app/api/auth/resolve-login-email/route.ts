@@ -16,18 +16,21 @@ export async function POST(req: NextRequest) {
     const raw =
       typeof body.identifier === "string" ? body.identifier.trim() : "";
 
-    if (!raw) {
+    /** Misma normalización que el cliente para que @ fullwidth cuente como correo. */
+    const withAsciiAt = raw.replace(/\uFF20/g, "@");
+
+    if (!withAsciiAt) {
       return NextResponse.json(
         { error: "Indica correo o usuario." },
         { status: 400 }
       );
     }
 
-    if (raw.includes("@")) {
-      return NextResponse.json({ email: raw.toLowerCase() });
+    if (withAsciiAt.includes("@")) {
+      return NextResponse.json({ email: withAsciiAt.toLowerCase() });
     }
 
-    const normalized = normalizeInternalLoginUsername(raw);
+    const normalized = normalizeInternalLoginUsername(withAsciiAt);
     const invalid = validateInternalLoginUsername(normalized);
     if (invalid) {
       return NextResponse.json({ error: invalid }, { status: 400 });

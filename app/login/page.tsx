@@ -33,6 +33,21 @@ const tituloLogin = {
   lineHeight: 1.2,
 };
 
+/** Normaliza @ fullwidth (p. ej. teclados móviles) y espacios; no llama al API de resolución. */
+function normalizeAtSeparators(raw: string): string {
+  return raw.trim().replace(/\uFF20/g, '@');
+}
+
+/** Correo real: lleva @ tras normalizar separadores (solo ASCII @ cuenta para login directo). */
+function isEmailIdentifier(raw: string): boolean {
+  return normalizeAtSeparators(raw).includes('@');
+}
+
+/** Email tal como lo espera signInWithPassword (sin pasar por /api/auth/resolve-login-email). */
+function emailForDirectSignIn(raw: string): string {
+  return normalizeAtSeparators(raw).toLowerCase();
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -64,7 +79,7 @@ export default function LoginPage() {
   }, [router]);
 
   const solicitarResetPassword = async () => {
-    const raw = identificador.trim();
+    const raw = normalizeAtSeparators(identificador);
     if (!raw.includes('@')) {
       alert(
         'La recuperación por correo solo aplica si inicias sesión con tu correo electrónico. Si usas usuario interno, pide ayuda al administrador.'
@@ -107,10 +122,10 @@ export default function LoginPage() {
   const handleLogin = async () => {
     if (loading) return;
 
-    const rawId = identificador.trim();
+    const trimmedId = identificador.trim();
     const cleanPassword = password;
 
-    if (!rawId || !cleanPassword) {
+    if (!trimmedId || !cleanPassword) {
       alert('Llena usuario o correo y contraseña');
       return;
     }
@@ -118,12 +133,15 @@ export default function LoginPage() {
     try {
       setLoading(true);
 
-      let emailParaAuth = rawId;
-      if (!rawId.includes('@')) {
+      let emailParaAuth: string;
+
+      if (isEmailIdentifier(trimmedId)) {
+        emailParaAuth = emailForDirectSignIn(trimmedId);
+      } else {
         const res = await fetch('/api/auth/resolve-login-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier: rawId }),
+          body: JSON.stringify({ identifier: trimmedId }),
         });
         const json = (await res.json()) as { email?: string; error?: string };
         if (!res.ok || !json.email) {
@@ -131,8 +149,6 @@ export default function LoginPage() {
           return;
         }
         emailParaAuth = json.email;
-      } else {
-        emailParaAuth = rawId.toLowerCase();
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
