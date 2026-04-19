@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { uniqueProfileUsername } from "@/lib/profile-username";
+import {
+  MENSAJE_ERROR_PASSWORD,
+  validarPassword,
+} from "@/lib/validar-password";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,9 +26,16 @@ export async function POST(req: NextRequest) {
     const password =
       typeof body.password === "string" ? body.password : "";
 
-    if (!email || password.length < 6) {
+    if (!email || typeof password !== "string" || password.length === 0) {
       return NextResponse.json(
-        { error: "Faltan datos o el password es muy corto." },
+        { error: "Indica correo y contraseña." },
+        { status: 400 }
+      );
+    }
+
+    if (!validarPassword(password)) {
+      return NextResponse.json(
+        { error: MENSAJE_ERROR_PASSWORD },
         { status: 400 }
       );
     }

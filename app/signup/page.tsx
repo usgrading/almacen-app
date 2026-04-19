@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import {
+  useState,
+  useEffect,
+  useMemo,
+  type CSSProperties,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { CampoFormulario } from '@/components/CampoFormulario';
 import { supabase } from '@/lib/supabase';
 import {
+  analizarRequisitosPassword,
   MENSAJE_ERROR_PASSWORD,
   validarPassword,
 } from '@/lib/validar-password';
@@ -30,6 +36,14 @@ const tituloSignupCard = {
   lineHeight: 1.2,
 };
 
+const estiloListaRequisitos: CSSProperties = {
+  listStyle: 'none',
+  margin: '10px 0 0',
+  padding: 0,
+  fontSize: 13,
+  lineHeight: 1.45,
+};
+
 export default function SignupPage() {
   const router = useRouter();
 
@@ -41,6 +55,18 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [sesionVerificada, setSesionVerificada] = useState(false);
   const [errorContraseña, setErrorContraseña] = useState('');
+
+  const requisitos = useMemo(
+    () => analizarRequisitosPassword(password),
+    [password]
+  );
+
+  const puedeCrearCuenta =
+    validarPassword(password) &&
+    email.trim().length > 0 &&
+    password.length > 0 &&
+    confirmPassword.length > 0 &&
+    password === confirmPassword;
 
   useEffect(() => {
     const verificarSesion = async () => {
@@ -258,6 +284,89 @@ export default function SignupPage() {
               )}
             </button>
           </div>
+
+          <p
+            style={{
+              margin: '12px 0 6px',
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#475569',
+            }}
+          >
+            Tu contraseña debe incluir:
+          </p>
+          <ul style={estiloListaRequisitos} aria-live="polite">
+            <li
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                marginBottom: 6,
+                color: requisitos.min8 ? '#15803d' : '#64748b',
+              }}
+            >
+              <span style={{ flexShrink: 0, width: 18 }} aria-hidden>
+                {requisitos.min8 ? '✓' : '○'}
+              </span>
+              <span>Mínimo 8 caracteres</span>
+            </li>
+            <li
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                marginBottom: 6,
+                color: requisitos.mayuscula ? '#15803d' : '#64748b',
+              }}
+            >
+              <span style={{ flexShrink: 0, width: 18 }} aria-hidden>
+                {requisitos.mayuscula ? '✓' : '○'}
+              </span>
+              <span>Una letra mayúscula</span>
+            </li>
+            <li
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                marginBottom: 6,
+                color: requisitos.minuscula ? '#15803d' : '#64748b',
+              }}
+            >
+              <span style={{ flexShrink: 0, width: 18 }} aria-hidden>
+                {requisitos.minuscula ? '✓' : '○'}
+              </span>
+              <span>Una letra minúscula</span>
+            </li>
+            <li
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                marginBottom: 6,
+                color: requisitos.numero ? '#15803d' : '#64748b',
+              }}
+            >
+              <span style={{ flexShrink: 0, width: 18 }} aria-hidden>
+                {requisitos.numero ? '✓' : '○'}
+              </span>
+              <span>Un número</span>
+            </li>
+            <li
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                marginBottom: 0,
+                color: requisitos.especial ? '#15803d' : '#64748b',
+              }}
+            >
+              <span style={{ flexShrink: 0, width: 18 }} aria-hidden>
+                {requisitos.especial ? '✓' : '○'}
+              </span>
+              <span>Un carácter especial (ej. ! @ #)</span>
+            </li>
+          </ul>
         </CampoFormulario>
 
         <CampoFormulario etiqueta="Confirmar contraseña" htmlFor="signup-confirm" margenInferior={errorContraseña ? 6 : 16}>
@@ -285,8 +394,12 @@ export default function SignupPage() {
           type="button"
           className="app-btn-primario"
           onClick={handleRegister}
-          disabled={loading}
-          style={loading ? appBtnPrimarioDisabled : appBtnPrimario}
+          disabled={loading || !puedeCrearCuenta}
+          style={
+            loading || !puedeCrearCuenta
+              ? appBtnPrimarioDisabled
+              : appBtnPrimario
+          }
         >
           {loading ? 'Creando...' : 'Crear cuenta'}
         </button>
