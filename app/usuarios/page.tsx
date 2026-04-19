@@ -16,6 +16,10 @@ import {
   appNavLink,
   appTituloPagina,
 } from "@/lib/app-ui";
+import {
+  normalizeInternalLoginUsername,
+  validateInternalLoginUsername,
+} from "@/lib/internal-username";
 
 type Rol = "admin" | "manager" | "viewer";
 
@@ -26,7 +30,7 @@ type Usuario = {
   username: string;
   rol: Rol;
   activo: boolean;
-  debe_cambiar_password: boolean;
+  must_change_password: boolean;
 };
 
 function getSupabaseErrorMessage(error: unknown): string {
@@ -63,12 +67,14 @@ function mapProfileRow(row: Record<string, unknown>): Usuario | null {
       ? true
       : row.activo === true || row.activo === 1 || row.activo === "true";
 
+  const flag =
+    row.must_change_password !== undefined && row.must_change_password !== null
+      ? row.must_change_password
+      : row.debe_cambiar_password;
   const debe =
-    row.debe_cambiar_password === undefined || row.debe_cambiar_password === null
+    flag === undefined || flag === null
       ? false
-      : row.debe_cambiar_password === true ||
-        row.debe_cambiar_password === 1 ||
-        row.debe_cambiar_password === "true";
+      : flag === true || flag === 1 || flag === "true";
 
   return {
     id: String(row.id),
@@ -77,7 +83,7 @@ function mapProfileRow(row: Record<string, unknown>): Usuario | null {
     username: String(row.username ?? row.user_name ?? ""),
     rol,
     activo,
-    debe_cambiar_password: debe,
+    must_change_password: debe,
   };
 }
 
@@ -93,19 +99,17 @@ export default function UsuariosPage() {
   const [comprobandoAcceso, setComprobandoAcceso] = useState(true);
 
   const [nombre, setNombre] = useState("");
-  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [rol, setRol] = useState<Rol>("viewer");
+  const [modalCreado, setModalCreado] = useState(false);
+  const [creadoUsername, setCreadoUsername] = useState("");
+  const [creadoPassword, setCreadoPassword] = useState("");
 
   const canSubmit = useMemo(() => {
-    return (
-      nombre.trim().length > 0 &&
-      email.trim().length > 0 &&
-      username.trim().length > 0 &&
-      password.length >= 6
-    );
-  }, [nombre, email, username, password]);
+    const norm = normalizeInternalLoginUsername(username);
+    const inv = validateInternalLoginUsername(norm);
+    return nombre.trim().length > 0 && inv === null;
+  }, [nombre, username]);
 
   const cargarUsuarios = async () => {
     try {
@@ -209,10 +213,17 @@ export default function UsuariosPage() {
 
   const resetForm = () => {
     setNombre("");
-    setEmail("");
     setUsername("");
-    setPassword("");
     setRol("viewer");
+  };
+
+  const copiarPortapapeles = async (texto: string, etiqueta: string) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      alert(`${etiqueta} copiado al portapapeles.`);
+    } catch {
+      alert(`No se pudo copiar. Copia manualmente: ${texto}`);
+    }
   };
 
   const crearUsuario = async (event: FormEvent<HTMLFormElement>) => {
@@ -241,22 +252,34 @@ export default function UsuariosPage() {
         },
         body: JSON.stringify({
           nombre: nombre.trim(),
-          email: email.trim(),
           username: username.trim(),
-          password,
           rol,
         }),
       });
 
-      const result = await response.json();
+      const result = (await response.json()) as {
+        error?: string;
+        username?: string;
+        passwordTemporal?: string;
+        rol?: string;
+      };
 
       if (!response.ok) {
         throw new Error(result?.error || "No se pudo crear el usuario.");
       }
 
+      const uOk = typeof result.username === "string" ? result.username : "";
+      const pOk =
+        typeof result.passwordTemporal === "string"
+          ? result.passwordTemporal
+          : "";
+
       resetForm();
       await cargarUsuarios();
-      alert(`Usuario creado correctamente con rol "${result.rol}".`);
+
+      setCreadoUsername(uOk);
+      setCreadoPassword(pOk);
+      setModalCreado(true);
     } catch (error) {
       alert(getSupabaseErrorMessage(error) || "Error al crear el usuario");
     } finally {
@@ -349,37 +372,15 @@ export default function UsuariosPage() {
               />
             </CampoFormulario>
 
-            <CampoFormulario etiqueta="Correo" htmlFor="usuario-email">
-              <input
-                id="usuario-email"
-                className="app-input-field"
-                style={{ ...styles.input, marginBottom: 0 }}
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </CampoFormulario>
-
             <CampoFormulario etiqueta="Usuario (login)" htmlFor="usuario-username">
               <input
                 id="usuario-username"
                 className="app-input-field"
                 style={{ ...styles.input, marginBottom: 0 }}
                 type="text"
+                autoComplete="off"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-              />
-            </CampoFormulario>
-
-            <CampoFormulario etiqueta="Contraseña" htmlFor="usuario-password">
-              <input
-                id="usuario-password"
-                className="app-input-field"
-                style={{ ...styles.input, marginBottom: 0 }}
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
               />
             </CampoFormulario>
 
@@ -417,6 +418,50 @@ export default function UsuariosPage() {
           </button>
         </form>
 
+        {modalCreado ? (
+          <div style={styles.modalOverlay} role="dialog" aria-modal="true">
+            <div style={styles.modalCard}>
+              <h3 style={styles.modalTitle}>Usuario creado</h3>
+              <p style={styles.modalText}>
+                Entrega estas credenciales al colaborador. En el primer acceso deberá
+                cambiar la contraseña.
+              </p>
+              <div style={styles.modalRow}>
+                <span style={styles.modalLabel}>Usuario</span>
+                <code style={styles.modalCode}>{creadoUsername}</code>
+                <button
+                  type="button"
+                  onClick={() => void copiarPortapapeles(creadoUsername, "Usuario")}
+                  style={styles.modalCopyBtn}
+                >
+                  Copiar usuario
+                </button>
+              </div>
+              <div style={styles.modalRow}>
+                <span style={styles.modalLabel}>Contraseña temporal</span>
+                <code style={styles.modalCode}>{creadoPassword}</code>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void copiarPortapapeles(creadoPassword, "Contraseña temporal")
+                  }
+                  style={styles.modalCopyBtn}
+                >
+                  Copiar contraseña
+                </button>
+              </div>
+              <button
+                type="button"
+                className="app-btn-primario"
+                onClick={() => setModalCreado(false)}
+                style={{ ...appBtnPrimario, width: "100%", marginTop: 14 }}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <section style={styles.tableSection}>
           <h2 style={styles.sectionTitle}>Listado de usuarios</h2>
           <p style={styles.orgHint}>
@@ -440,12 +485,7 @@ export default function UsuariosPage() {
                   </div>
 
                   <div style={styles.mobileRow}>
-                    <span style={styles.mobileLabel}>Email:</span>
-                    <span style={styles.mobileValue}>{usuario.email}</span>
-                  </div>
-
-                  <div style={styles.mobileRow}>
-                    <span style={styles.mobileLabel}>Username:</span>
+                    <span style={styles.mobileLabel}>Usuario:</span>
                     <span style={styles.mobileValue}>{usuario.username}</span>
                   </div>
 
@@ -474,8 +514,7 @@ export default function UsuariosPage() {
                 <thead>
                   <tr>
                     <th style={styles.th}>Nombre</th>
-                    <th style={styles.th}>Email</th>
-                    <th style={styles.th}>Username</th>
+                    <th style={styles.th}>Usuario</th>
                     <th style={styles.th}>Rol</th>
                     <th style={styles.th}>Activo</th>
                     <th style={styles.th}>Acciones</th>
@@ -485,7 +524,6 @@ export default function UsuariosPage() {
                   {usuarios.map((usuario) => (
                     <tr key={usuario.id}>
                       <td style={styles.td}>{usuario.nombre}</td>
-                      <td style={styles.td}>{usuario.email}</td>
                       <td style={styles.td}>{usuario.username}</td>
                       <td style={styles.td}>{usuario.rol}</td>
                       <td style={styles.td}>{usuario.activo ? "true" : "false"}</td>
@@ -650,5 +688,72 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 600,
     textAlign: "right",
     wordBreak: "break-word",
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 50,
+    padding: 16,
+  },
+  modalCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    padding: "22px 20px",
+    maxWidth: 440,
+    width: "100%",
+    boxShadow: "0 18px 40px rgba(15, 23, 42, 0.18)",
+    border: "1px solid #e2e8f0",
+  },
+  modalTitle: {
+    margin: "0 0 10px 0",
+    fontSize: "19px",
+    fontWeight: 700,
+    color: "#0f172a",
+  },
+  modalText: {
+    margin: "0 0 16px 0",
+    fontSize: "14px",
+    color: "#475569",
+    lineHeight: 1.45,
+  },
+  modalRow: {
+    marginBottom: 14,
+    paddingBottom: 12,
+    borderBottom: "1px solid #f1f5f9",
+  },
+  modalLabel: {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    marginBottom: 6,
+  },
+  modalCode: {
+    display: "block",
+    fontSize: "14px",
+    wordBreak: "break-all",
+    backgroundColor: "#f8fafc",
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid #e2e8f0",
+    color: "#0f172a",
+    marginBottom: 8,
+    fontFamily: "ui-monospace, monospace",
+  },
+  modalCopyBtn: {
+    padding: "8px 12px",
+    borderRadius: 10,
+    border: "1px solid #cbd5e1",
+    backgroundColor: "#ffffff",
+    color: "#334155",
+    fontWeight: 600,
+    fontSize: "13px",
+    cursor: "pointer",
   },
 };

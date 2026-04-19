@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         username,
         rol: rolFinal,
         activo: true,
-        debe_cambiar_password: false,
+        must_change_password: false,
       },
       {
         onConflict: "id",

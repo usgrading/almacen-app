@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { fetchMustChangePassword } from '@/lib/must-change-password';
 import { CampoFormulario } from '@/components/CampoFormulario';
 import {
   appBtnPrimario,
@@ -35,7 +36,7 @@ const tituloLogin = {
 export default function LoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState('');
+  const [identificador, setIdentificador] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,7 +46,15 @@ export default function LoginPage() {
   useEffect(() => {
     const verificarSesion = async () => {
       const { data } = await supabase.auth.getSession();
-      if (data.session) {
+      if (data.session?.user) {
+        const must = await fetchMustChangePassword(
+          supabase,
+          data.session.user.id
+        );
+        if (must) {
+          router.replace('/cambiar-password');
+          return;
+        }
         router.replace('/dashboard');
         return;
       }
@@ -55,30 +64,34 @@ export default function LoginPage() {
   }, [router]);
 
   const solicitarResetPassword = async () => {
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) {
-      alert('Escribe tu correo arriba para enviarte el enlace de recuperación.');
+    const raw = identificador.trim();
+    if (!raw.includes('@')) {
+      alert(
+        'La recuperación por correo solo aplica si inicias sesión con tu correo electrónico. Si usas usuario interno, pide ayuda al administrador.'
+      );
       return;
     }
 
+    const cleanEmail = raw.toLowerCase();
+
     setEnviandoReset(true);
     try {
-      console.log('[login] resetPasswordForEmail — email limpio:', cleanEmail);
-
       const origin = baseUrlParaAuth();
       const redirectTo = origin ? `${origin}/reset-password` : undefined;
 
-      const { data, error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo,
-      });
-
-      console.log('[login] resetPasswordForEmail — data:', data);
-      console.log('[login] resetPasswordForEmail — error:', error);
+      const { data, error } = await supabase.auth.resetPasswordForEmail(
+        cleanEmail,
+        {
+          redirectTo,
+        }
+      );
 
       if (error) {
         alert('No se pudo enviar el correo: ' + error.message);
         return;
       }
+
+      console.log('[login] resetPasswordForEmail — data:', data);
 
       alert(
         'Si ese correo está registrado, recibirás un enlace para restablecer la contraseña.'
@@ -94,38 +107,52 @@ export default function LoginPage() {
   const handleLogin = async () => {
     if (loading) return;
 
-    const cleanEmail = email.trim().toLowerCase();
+    const rawId = identificador.trim();
     const cleanPassword = password;
 
-    if (!cleanEmail || !cleanPassword) {
-      alert('Llena correo y contraseña');
+    if (!rawId || !cleanPassword) {
+      alert('Llena usuario o correo y contraseña');
       return;
     }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-
-    console.log('[login] Supabase URL:', supabaseUrl);
-    console.log('[login] email limpio:', cleanEmail);
-    console.log('[login] longitud password:', cleanPassword.length);
 
     try {
       setLoading(true);
 
+      let emailParaAuth = rawId;
+      if (!rawId.includes('@')) {
+        const res = await fetch('/api/auth/resolve-login-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: rawId }),
+        });
+        const json = (await res.json()) as { email?: string; error?: string };
+        if (!res.ok || !json.email) {
+          alert(json.error || 'Usuario o contraseña incorrectos.');
+          return;
+        }
+        emailParaAuth = json.email;
+      } else {
+        emailParaAuth = rawId.toLowerCase();
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
+        email: emailParaAuth,
         password: cleanPassword,
       });
-
-      console.log('[login] signInWithPassword — data:', data);
-      console.log('[login] signInWithPassword — error:', error);
 
       if (error) {
         alert('Error: ' + error.message);
         return;
       }
 
-      if (!data.session) {
+      if (!data.session?.user) {
         alert('No se obtuvo sesión. Intenta de nuevo.');
+        return;
+      }
+
+      const must = await fetchMustChangePassword(supabase, data.session.user.id);
+      if (must) {
+        router.replace('/cambiar-password');
         return;
       }
 
@@ -182,17 +209,17 @@ export default function LoginPage() {
 
         <div style={{ marginTop: 26 }}>
           <CampoFormulario
-            etiqueta="Correo"
-            htmlFor="login-email"
+            etiqueta="Correo o usuario"
+            htmlFor="login-identificador"
             margenInferior={10}
           >
             <input
-              id="login-email"
+              id="login-identificador"
               className="app-input-field"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              autoComplete="username"
+              value={identificador}
+              onChange={(e) => setIdentificador(e.target.value)}
               style={appInput}
             />
           </CampoFormulario>

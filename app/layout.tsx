@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { MustChangePasswordGate } from "@/components/MustChangePasswordGate";
 import "./globals.css";
 import "./app-ui.css";
 
@@ -34,7 +35,9 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/npm/flag-icons/css/flag-icons.min.css"
         />
       </head>
-      <body className="app-theme min-h-full flex flex-col">{children}</body>
+      <body className="app-theme min-h-full flex flex-col">
+        <MustChangePasswordGate>{children}</MustChangePasswordGate>
+      </body>
     </html>
   );
 }

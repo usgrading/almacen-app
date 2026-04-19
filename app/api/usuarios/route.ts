@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { uniqueProfileUsername } from "@/lib/profile-username";
+import { buildInternalAuthEmail } from "@/lib/internal-email";
+import {
+  normalizeInternalLoginUsername,
+  validateInternalLoginUsername,
+} from "@/lib/internal-username";
+import { generateTemporaryPassword } from "@/lib/temp-password";
 import { canManageUsers, parseAppRole } from "@/lib/roles";
 
 /**
- * Creación de usuarios internos: NO crea organizaciones.
- * El `organization_id` es siempre el del admin (Bearer) leído desde `profiles`.
+ * Alta de usuarios internos: correo y contraseña los genera el servidor.
+ * El organization_id sale siempre del perfil del administrador autenticado (Bearer).
  */
 
 export async function POST(req: NextRequest) {
@@ -13,16 +18,20 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const nombre =
       typeof body.nombre === "string" ? body.nombre.trim() : "";
-    const email =
-      typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    const password =
-      typeof body.password === "string" ? body.password : "";
-    const username = body.username;
     const rol = body.rol;
 
-    if (!nombre || !email || password.length < 6) {
+    const usernameRaw =
+      typeof body.username === "string" ? body.username : "";
+    const normalizedUsername = normalizeInternalLoginUsername(usernameRaw);
+    const usernameError = validateInternalLoginUsername(normalizedUsername);
+
+    if (!nombre || usernameError) {
       return NextResponse.json(
-        { error: "Faltan nombre, correo o contraseña válida (mín. 6 caracteres)." },
+        {
+          error:
+            usernameError ??
+            "Indica nombre y un usuario de login válido.",
+        },
         { status: 400 }
       );
     }
@@ -42,7 +51,6 @@ export async function POST(req: NextRequest) {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Usuario autenticado = quien envía el Bearer (mismo flujo que supabase.auth.getSession en cliente)
     const {
       data: { user: inviter },
       error: inviterError,
@@ -127,10 +135,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { data: ocupado } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("username", normalizedUsername)
+      .maybeSingle();
+
+    if (ocupado) {
+      return NextResponse.json(
+        { error: "Ese nombre de usuario ya está en uso. Elige otro." },
+        { status: 409 }
+      );
+    }
+
+    const internalEmail = buildInternalAuthEmail(normalizedUsername);
+    const tempPassword = generateTemporaryPassword();
+
     const { data: userData, error: userError } =
       await admin.auth.admin.createUser({
-        email,
-        password,
+        email: internalEmail,
+        password: tempPassword,
         email_confirm: true,
         user_metadata: {
           nombre,
@@ -149,22 +173,17 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = userData.user.id;
-    const handleBase =
-      typeof username === "string" && username.trim().length > 0
-        ? username.trim()
-        : email;
-    const usernameFinal = uniqueProfileUsername(handleBase, userId);
 
     const { error: profileError } = await admin.from("profiles").upsert(
       {
         id: userId,
         organization_id: organizationId,
         nombre,
-        email,
-        username: usernameFinal,
+        email: internalEmail,
+        username: normalizedUsername,
         rol: rolFinal,
         activo: true,
-        debe_cambiar_password: true,
+        must_change_password: true,
       },
       {
         onConflict: "id",
@@ -181,6 +200,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      username: normalizedUsername,
+      passwordTemporal: tempPassword,
       rol: rolFinal,
       organization_id: organizationId,
     });
