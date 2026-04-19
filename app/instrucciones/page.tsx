@@ -21,9 +21,6 @@ const SECCIONES: readonly string[] = [
   "Reportes",
   "Alertas",
   "Usuarios",
-  "Recomendaciones",
-  "Problemas comunes",
-  "Soporte",
 ];
 
 export default function InstruccionesPage() {
@@ -113,20 +110,6 @@ export default function InstruccionesPage() {
               <p style={styles.placeholder}>Contenido pendiente...</p>
             </section>
           ))}
-
-          <section
-            aria-labelledby="instrucciones-cierre"
-            style={{
-              ...appCardInner,
-              padding: "18px",
-              marginTop: 4,
-            }}
-          >
-            <h3 id="instrucciones-cierre" style={styles.sectionTitle}>
-              Genial otra vez
-            </h3>
-            <p style={styles.cierreTexto}>Hasta luego.</p>
-          </section>
         </div>
       </div>
     </main>
@@ -155,11 +138,5 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 15,
     lineHeight: 1.5,
     color: "#64748b",
-  },
-  cierreTexto: {
-    margin: 0,
-    fontSize: 15,
-    lineHeight: 1.5,
-    color: "#475569",
   },
 };
