@@ -33,19 +33,12 @@ const tituloLogin = {
   lineHeight: 1.2,
 };
 
-/** Normaliza @ fullwidth (p. ej. teclados móviles) y espacios; no llama al API de resolución. */
-function normalizeAtSeparators(raw: string): string {
-  return raw.trim().replace(/\uFF20/g, '@');
-}
-
-/** Correo real: lleva @ tras normalizar separadores (solo ASCII @ cuenta para login directo). */
-function isEmailIdentifier(raw: string): boolean {
-  return normalizeAtSeparators(raw).includes('@');
-}
-
-/** Email tal como lo espera signInWithPassword (sin pasar por /api/auth/resolve-login-email). */
-function emailForDirectSignIn(raw: string): string {
-  return normalizeAtSeparators(raw).toLowerCase();
+function normalizarIdentificador(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/[＠﹫@]/g, '@');
 }
 
 export default function LoginPage() {
@@ -79,15 +72,13 @@ export default function LoginPage() {
   }, [router]);
 
   const solicitarResetPassword = async () => {
-    const raw = normalizeAtSeparators(identificador);
-    if (!raw.includes('@')) {
+    const cleanId = normalizarIdentificador(identificador);
+    if (!cleanId.includes('@')) {
       alert(
         'La recuperación por correo solo aplica si inicias sesión con tu correo electrónico. Si usas usuario interno, pide ayuda al administrador.'
       );
       return;
     }
-
-    const cleanEmail = raw.toLowerCase();
 
     setEnviandoReset(true);
     try {
@@ -95,7 +86,7 @@ export default function LoginPage() {
       const redirectTo = origin ? `${origin}/reset-password` : undefined;
 
       const { data, error } = await supabase.auth.resetPasswordForEmail(
-        cleanEmail,
+        cleanId,
         {
           redirectTo,
         }
@@ -122,10 +113,10 @@ export default function LoginPage() {
   const handleLogin = async () => {
     if (loading) return;
 
-    const trimmedId = identificador.trim();
+    const cleanId = normalizarIdentificador(identificador);
     const cleanPassword = password;
 
-    if (!trimmedId || !cleanPassword) {
+    if (!cleanId || !cleanPassword) {
       alert('Llena usuario o correo y contraseña');
       return;
     }
@@ -133,15 +124,13 @@ export default function LoginPage() {
     try {
       setLoading(true);
 
-      let emailParaAuth: string;
+      let emailParaAuth = cleanId;
 
-      if (isEmailIdentifier(trimmedId)) {
-        emailParaAuth = emailForDirectSignIn(trimmedId);
-      } else {
+      if (!cleanId.includes('@')) {
         const res = await fetch('/api/auth/resolve-login-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier: trimmedId }),
+          body: JSON.stringify({ identifier: cleanId }),
         });
         const json = (await res.json()) as { email?: string; error?: string };
         if (!res.ok || !json.email) {
