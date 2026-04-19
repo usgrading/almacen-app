@@ -254,6 +254,17 @@ export default function DashboardPage() {
                 Usuarios
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => router.push('/instrucciones')}
+              style={{
+                ...buttonStyle,
+                ...(!isAdmin(appRole) ? { gridColumn: '1 / -1' } : {}),
+              }}
+            >
+              Instrucciones
+            </button>
           </div>
 
           <button
