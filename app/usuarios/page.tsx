@@ -4,7 +4,7 @@ import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageLogo } from "@/components/PageLogo";
 import { supabase } from "@/lib/supabase";
-import { ensureMiOrganizationId, getMiOrganizationId } from "@/lib/organization";
+import { requireMiOrganizationId } from "@/lib/organization";
 import { getUserRole, isAdmin, parseAppRole } from "@/lib/roles";
 import { CampoFormulario } from "@/components/CampoFormulario";
 import {
@@ -121,11 +121,13 @@ export default function UsuariosPage() {
         return;
       }
 
-      await ensureMiOrganizationId(supabase);
-
-      const orgId = await getMiOrganizationId(supabase);
-      if (!orgId) {
-        setCargaError("No hay sesión. Inicia sesión para ver tu equipo.");
+      let orgId: string;
+      try {
+        orgId = await requireMiOrganizationId(supabase);
+      } catch {
+        setCargaError(
+          "Tu perfil no tiene organización asignada. Contacta al administrador."
+        );
         setUsuarios([]);
         return;
       }
@@ -173,13 +175,15 @@ export default function UsuariosPage() {
           router.push("/login");
           return;
         }
-        await ensureMiOrganizationId(supabase);
+        await requireMiOrganizationId(supabase);
         const rol = await getUserRole(supabase);
         if (!isAdmin(rol)) {
           router.replace("/dashboard");
           return;
         }
         setAccesoAdmin(true);
+      } catch {
+        router.replace("/dashboard");
       } finally {
         setComprobandoAcceso(false);
       }

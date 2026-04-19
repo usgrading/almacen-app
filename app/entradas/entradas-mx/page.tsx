@@ -37,7 +37,6 @@ import {
   appNavLink,
   appTituloPagina,
 } from '@/lib/app-ui';
-import { subirImagenFacturaAlBucket } from '@/lib/subir-factura-storage';
 import { solicitarAnalisisFactura } from '@/lib/analizar-factura-client';
 import { fechaTextoAInputDate, totalTextoACostoTotal } from '@/lib/factura-campos-helpers';
 import {
@@ -298,7 +297,9 @@ export default function EntradasPage() {
   }, []);
 
   useEffect(() => {
-    void obtenerOrganizacionParaEntrada(supabase).then(setOrgIdPerfil);
+    void obtenerOrganizacionParaEntrada(supabase)
+      .then(setOrgIdPerfil)
+      .catch(() => setOrgIdPerfil(null));
   }, []);
 
   const redondear2 = (valor: number) => {
@@ -356,29 +357,6 @@ export default function EntradasPage() {
         return;
       }
 
-      let fotoFacturaPublica: string | null = null;
-      if (archivoFactura) {
-        logFacturaMovil('mx', 'guardar: inicio upload a Supabase', {
-          nombre: archivoFactura.name,
-          tipo: archivoFactura.type || '(vacío)',
-          tamaño: archivoFactura.size,
-        });
-        const subida = await subirImagenFacturaAlBucket(supabase, archivoFactura);
-        if ('error' in subida) {
-          logFacturaMovil('mx', 'guardar: upload falló', { error: subida.error });
-          alert(
-            subida.error ||
-              'No se pudo subir la foto de la factura. Comprueba tu conexión e inténtalo de nuevo.'
-          );
-          setCargando(false);
-          return;
-        }
-        fotoFacturaPublica = subida.url;
-        logFacturaMovil('mx', 'guardar: upload terminado OK');
-      } else {
-        logFacturaMovil('mx', 'guardar: sin archivoFactura (foto_factura null)');
-      }
-
       const costoDocNum = Number(costoTotalFactura);
       const costoFacturaRef =
         costoTotalFactura.trim() && Number.isFinite(costoDocNum) && costoDocNum > 0
@@ -419,7 +397,6 @@ export default function EntradasPage() {
         numeroFactura,
         fecha: fecha || null,
         notas,
-        fotoFactura: fotoFacturaPublica,
         costoTotalFactura: costoFacturaRef,
         items: parsed.items,
         stockNuevoPorProducto: stockMap,
@@ -455,7 +432,7 @@ export default function EntradasPage() {
   };
 
   useEffect(() => {
-    if (orgIdPerfil === undefined) {
+    if (orgIdPerfil == null) {
       return;
     }
 
@@ -686,9 +663,9 @@ export default function EntradasPage() {
                   boxSizing: 'border-box',
                 }}
               >
-                {cargando && archivoFactura ? (
+                {cargando ? (
                   <span style={{ textAlign: 'center', padding: '0 12px' }}>
-                    Subiendo imagen al servidor...
+                    Guardando entrada...
                   </span>
                 ) : previewFacturaUrl ? (
                   <img

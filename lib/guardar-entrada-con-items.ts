@@ -66,7 +66,6 @@ export async function guardarEntradaConItems(params: {
   numeroFactura: string;
   fecha: string | null;
   notas: string | null;
-  fotoFactura: string | null;
   costoTotalFactura: number | null;
   items: ItemEntradaGuardado[];
   stockNuevoPorProducto: Record<string, { minimo: number; maximo: number }>;
@@ -79,7 +78,6 @@ export async function guardarEntradaConItems(params: {
     numeroFactura,
     fecha,
     notas,
-    fotoFactura,
     costoTotalFactura,
     items,
     stockNuevoPorProducto,
@@ -103,13 +101,15 @@ export async function guardarEntradaConItems(params: {
     )
   );
 
-  const orgId = await obtenerOrganizacionParaEntrada(supabase);
-  if (!orgId) {
-    return {
-      ok: false,
-      mensaje:
-        'No hay organización asignada al perfil. Revisa tu sesión o contacta al administrador.',
-    };
+  let orgId: string;
+  try {
+    orgId = await obtenerOrganizacionParaEntrada(supabase);
+  } catch (e) {
+    const msg =
+      e instanceof Error
+        ? e.message
+        : 'No hay organización asignada al perfil. Revisa tu sesión o contacta al administrador.';
+    return { ok: false, mensaje: msg };
   }
 
   const gruposPrev = agruparItemsParaInventario(items);
@@ -161,7 +161,6 @@ export async function guardarEntradaConItems(params: {
     notas: (notas ?? '').trim() || null,
     user_id: userId,
     creado_por: userId,
-    foto_factura: fotoFactura,
     origen,
     organization_id: orgId,
     costo_total:

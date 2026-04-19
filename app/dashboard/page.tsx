@@ -4,7 +4,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
-import { ensureMiOrganizationId } from '@/lib/organization';
+import { requireMiOrganizationId } from '@/lib/organization';
 import { isAdmin, normalizeRole, type AppRole } from '@/lib/roles';
 import {
   appBtnPrimario,
@@ -53,7 +53,7 @@ export default function DashboardPage() {
           return;
         }
 
-        await ensureMiOrganizationId(supabase);
+        await requireMiOrganizationId(supabase);
 
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -94,6 +94,9 @@ export default function DashboardPage() {
 
         setProfile(p);
         setAppRole(effectiveRol);
+      } catch (e) {
+        console.error('[dashboard]', e);
+        router.push('/login');
       } finally {
         setLoading(false);
       }

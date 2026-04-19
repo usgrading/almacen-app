@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from 'react';
 import { supabase } from '@/lib/supabase';
-import { ensureMiOrganizationId, getMiOrganizationId } from '@/lib/organization';
+import { requireMiOrganizationId } from '@/lib/organization';
 import {
   ReporteLayout,
   reporteEmptyBox,
@@ -70,9 +70,10 @@ export default function ReporteSalidasPage() {
     const cargar = async () => {
       try {
         setLoading(true);
-        await ensureMiOrganizationId(supabase);
-        const orgId = await getMiOrganizationId(supabase);
-        if (!orgId) {
+        let orgId: string;
+        try {
+          orgId = await requireMiOrganizationId(supabase);
+        } catch {
           setSalidas([]);
           return;
         }

@@ -3,7 +3,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ensureMiOrganizationId, getMiOrganizationId } from '@/lib/organization';
+import { requireMiOrganizationId } from '@/lib/organization';
 import { canMutate, getUserRole, isViewer, type AppRole } from '@/lib/roles';
 import { CampoFormulario } from '@/components/CampoFormulario';
 import {
@@ -58,9 +58,10 @@ export default function SalidasPage() {
 
   useEffect(() => {
     const cargarSalidas = async () => {
-      await ensureMiOrganizationId(supabase);
-      const orgId = await getMiOrganizationId(supabase);
-      if (!orgId) {
+      let orgId: string;
+      try {
+        orgId = await requireMiOrganizationId(supabase);
+      } catch {
         setSalidas([]);
         return;
       }
@@ -126,9 +127,10 @@ export default function SalidasPage() {
 
     setLoading(true);
 
-    await ensureMiOrganizationId(supabase);
-    const orgId = await getMiOrganizationId(supabase);
-    if (!orgId) {
+    let orgId: string;
+    try {
+      orgId = await requireMiOrganizationId(supabase);
+    } catch {
       alert('No se pudo determinar tu organización. Vuelve a iniciar sesión.');
       setLoading(false);
       return;

@@ -1,35 +1,25 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ensureMiOrganizationId, getMiOrganizationId } from "@/lib/organization";
+import { requireMiOrganizationId } from "@/lib/organization";
 
 /**
- * Asegura perfil con organization_id y devuelve el id de organización del usuario.
+ * Devuelve el `organization_id` del perfil o lanza si falta (sin asignación automática).
  */
 export async function obtenerOrganizacionParaEntrada(
   client: SupabaseClient
-): Promise<string | null> {
-  await ensureMiOrganizationId(client);
-  return getMiOrganizationId(client);
+): Promise<string> {
+  return requireMiOrganizationId(client);
 }
 
 /**
- * Busca una fila de inventario por producto + origen, priorizando organization_id
- * y haciendo fallback a filas legacy con organization_id nulo.
+ * Busca inventario por producto + origen dentro de la organización del perfil,
+ * con fallback opcional a filas legacy (`organization_id` null).
  */
 export async function buscarInventarioEntrada(
   client: SupabaseClient,
   productoNormalizado: string,
   origen: "MX" | "USA",
-  orgId: string | null
+  orgId: string
 ) {
-  if (!orgId) {
-    return client
-      .from("inventario")
-      .select("*")
-      .eq("producto", productoNormalizado)
-      .eq("origen", origen)
-      .maybeSingle();
-  }
-
   const conOrg = await client
     .from("inventario")
     .select("*")
